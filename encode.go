@@ -107,12 +107,16 @@ func Marshal(i interface{}) *dynamodb.PutItemInput {
 	return &dynamodb.PutItemInput{Item: e.item, TableName: &tn}
 }
 
+func TableName(i interface{}) string {
+	return reflect.TypeOf(i).Name() + "s"
+}
+
 // Try to create a table if it doesn't already exist
 // If it does exist or cannot be created, return error
 //   - Tables are created from structs only, and will panic on any other type
 //   - Table name will be [structName] + s (ie type Doc struct {...} => table "Docs")
 func createTable(svc *dynamodb.DynamoDB, v interface{}, w int64, r int64) error {
-	tn := reflect.TypeOf(v).Name() + "s"
+	tn := TableName(v)
 	if err := tableExists(svc, tn); err != nil {
 		return err
 	}
@@ -228,20 +232,20 @@ func getKeyType(s reflect.StructField, v reflect.Value) (string, error) {
 
 // depth-first pursuit of a partition key through structs marked HASH
 // if a string is not found at a leaf, this method will panic.
-func getPartitionKey(v reflect.Value) string {
-	t := v.Type()
+func getPartitionKey(t reflect.Type) []int {
 	for n := 0; n < t.NumField(); n++ {
 		f := t.Field(n)
 		_, opts := parseTag(f.Tag.Get("dynaGo"))
 		if !opts.Contains(dynamodb.KeyTypeHash) {
 			continue
 		}
-		fv := v.Field(n)
 		switch f.Type.Kind() {
+		//pointers?.. not yet.
+		//int?  not yet.
 		case reflect.String:
-			return fv.String()
+			return []int{n}
 		case reflect.Struct:
-			return getPartitionKey(fv)
+			return append([]int{n}, getPartitionKey(f.Type)...)
 		}
 	}
 	panic(&MissingPartitionKeyError{t})
