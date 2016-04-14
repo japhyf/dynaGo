@@ -43,8 +43,8 @@ var TablesSchema = map[string]*dynamodb.CreateTableInput{
 			WriteCapacityUnits: aws.Int64(1),
 		},
 	},
-	"Users": &dynamodb.CreateTableInput{
-		TableName: aws.String("Users"),
+	"Usrs": &dynamodb.CreateTableInput{
+		TableName: aws.String("Usrs"),
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
 				AttributeName: aws.String("UserId"),
@@ -113,22 +113,22 @@ var TablesSchema = map[string]*dynamodb.CreateTableInput{
 	},
 }
 */
+var cred = &credentials.SharedCredentialsProvider{Profile: "admin_marcus"}
+var svc = dynamodb.New(
+	session.New(),
+	&aws.Config{
+		Credentials: credentials.NewCredentials(cred),
+		Endpoint:    aws.String("http://localhost:8000"),
+		Region:      aws.String("us-east-1"),
+	})
 
-func TestEncode(t *testing.T) {
-	cred := &credentials.SharedCredentialsProvider{Profile: "admin_marcus"}
-	svc := dynamodb.New(
-		session.New(),
-		&aws.Config{
-			Credentials: credentials.NewCredentials(cred),
-			Endpoint:    aws.String("http://localhost:8000"),
-			Region:      aws.String("us-east-1"),
-		})
+func TestEncodeTables(t *testing.T) {
 	t.Log(`create table 'Tags'`)
 	if err := createTable(svc, Tag{}, 1, 1); err != nil {
 		t.Error(err)
 	}
-	t.Log(`create table 'Users'`)
-	if err := createTable(svc, User{}, 1, 1); err != nil {
+	t.Log(`create table 'Usrs'`)
+	if err := createTable(svc, Usr{}, 1, 1); err != nil {
 		t.Error(err)
 	}
 	t.Log(`create table 'Sessions'`)
@@ -139,13 +139,16 @@ func TestEncode(t *testing.T) {
 	if err := createTable(svc, Message{}, 1, 1); err != nil {
 		t.Error(err)
 	}
+}
+
+func TestEncodeValues(t *testing.T) {
 
 	ses0 := Session{
 		Id: "abc",
-		Mentor: &User{
+		Mentor: &Usr{
 			Id: "bobo",
 		},
-		Mentee: &User{
+		Mentee: &Usr{
 			Id: "hooch",
 		},
 		Begin:    time.Now().Unix(),
@@ -154,10 +157,10 @@ func TestEncode(t *testing.T) {
 	}
 	ses1 := Session{
 		Id: "def",
-		Mentor: &User{
+		Mentor: &Usr{
 			Id: "obob",
 		},
-		Mentee: &User{
+		Mentee: &Usr{
 			Id: "oohhc",
 		},
 		Begin:    time.Now().Unix(),
@@ -177,6 +180,14 @@ func TestEncode(t *testing.T) {
 		Begin:    ses0.Begin + 1,
 		End:      ses1.End - 1,
 	}
+	usr := Usr{
+		Id:     "1000",
+		Origin: "home",
+		Pswd:   "1234",
+		Email:  "guy@home.org",
+		Alias:  "guy",
+	}
+
 	t.Log("Put message...")
 	if _, err := svc.PutItem(Marshal(msg)); err != nil {
 		t.Errorf("failed: %s", err.Error())
@@ -189,6 +200,11 @@ func TestEncode(t *testing.T) {
 	if _, err := svc.PutItem(Marshal(tag)); err != nil {
 		t.Errorf("failed: %s", err.Error())
 	}
+	t.Log("Put usr...")
+	if _, err := svc.PutItem(Marshal(usr)); err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
+
 }
 
 type Tag struct {
@@ -199,7 +215,7 @@ type Tag struct {
 	End      int64 `dynaGo:",RANGE"`
 }
 
-type User struct {
+type Usr struct {
 	Id     string `dynaGo:"UserId,HASH"`
 	Origin string
 	Pswd   string
@@ -209,8 +225,8 @@ type User struct {
 
 type Session struct {
 	Id       string `dynaGo:"SessionId,HASH"`
-	Mentor   *User
-	Mentee   *User
+	Mentor   *Usr
+	Mentee   *Usr
 	Begin    int64
 	End      int64 `dynaGo:",RANGE"`
 	Duration int64
