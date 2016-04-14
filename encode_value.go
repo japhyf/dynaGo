@@ -59,7 +59,7 @@ func stringValueEncoder(e *valueEncoderState, n string, v reflect.Value) string 
 	return str
 }
 func structValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
-	i := getPartitionKey(v.Type())
+	i := GetPartitionKey(v.Type())
 	str := v.FieldByIndex(i).String()
 	if e != nil {
 		e.item[n] = &dynamodb.AttributeValue{S: &str}

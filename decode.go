@@ -150,7 +150,7 @@ func newExploder(t reflect.Type) exploder {
 			return arr
 		}
 	case reflect.Struct:
-		i := getPartitionKey(t)
+		i := GetPartitionKey(t)
 		return newExploder(t.FieldByIndex(i).Type)
 	case reflect.Ptr:
 		return newExploder(t.Elem())
@@ -163,7 +163,7 @@ func newExploder(t reflect.Type) exploder {
 //dynaGo only Stores one layer of values, so we have to find the Hash key field,
 //compose the hierarchy above the field, and set that with the attribute value.
 func structDecoder(av *dynamodb.AttributeValue, rv reflect.Value) {
-	i := getPartitionKey(rv.Type())
+	i := GetPartitionKey(rv.Type())
 	structCompose(rv, i)
 	fv := rv.FieldByIndex(i)
 	decoder(fv.Type())(av, fv)
@@ -217,7 +217,7 @@ type field struct {
 
 func newField(sf reflect.StructField) field {
 	return field{
-		name:  getAttrName(sf),
+		name:  GetAttrName(sf),
 		index: sf.Index,
 		typ:   sf.Type,
 	}
