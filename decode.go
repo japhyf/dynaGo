@@ -92,6 +92,9 @@ func intDecoder(av *dynamodb.AttributeValue, rv reflect.Value) {
 	n, _ := strconv.ParseInt(*av.N, 10, 64)
 	rv.SetInt(n)
 }
+func byteSliceDecoder(av *dynamodb.AttributeValue, rv reflect.Value) {
+	rv.Set(reflect.ValueOf(av.B))
+}
 
 type sliceDecoder struct {
 	explode     exploder
@@ -123,6 +126,10 @@ func (sd *sliceDecoder) decode(av *dynamodb.AttributeValue, rv reflect.Value) {
 // be partifularly useful in a DB - the data wouldn't be accessible / normalized.
 func newSliceDecoder(t reflect.Type) decoderFunc {
 	et := t.Elem()
+	//this is a []byte return []byte decoder
+	if et.Kind() == reflect.Uint8 {
+		return byteSliceDecoder
+	}
 	dec := sliceDecoder{newExploder(et), decoder(et)}
 	return dec.decode
 }

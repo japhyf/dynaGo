@@ -5,6 +5,7 @@
 package dynaGo
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"

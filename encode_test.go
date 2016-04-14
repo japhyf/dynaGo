@@ -5,6 +5,7 @@
 package dynaGo
 
 import (
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -180,10 +181,11 @@ func TestEncodeValues(t *testing.T) {
 		Begin:    ses0.Begin + 1,
 		End:      ses1.End - 1,
 	}
+	b, _ := hex.DecodeString("ab091cf3")
 	usr := Usr{
 		Id:     "1000",
 		Origin: "home",
-		Pswd:   "1234",
+		Pswd:   b,
 		Email:  "guy@home.org",
 		Alias:  "guy",
 	}
@@ -218,7 +220,7 @@ type Tag struct {
 type Usr struct {
 	Id     string `dynaGo:"UserId,HASH"`
 	Origin string
-	Pswd   string
+	Pswd   []byte
 	Email  string
 	Alias  string
 }
