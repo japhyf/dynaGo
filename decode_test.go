@@ -59,16 +59,16 @@ func TestDecode(t *testing.T) {
 	fmt.Printf("----- Session count:%d\n\n", len(sess))
 
 	// all strings.. not too intersting.
-	users := exercise(t, svc, User{}).([]*User)
+	users := exercise(t, svc, Usr{}).([]*Usr)
 	for _, user := range users {
-		fmt.Printf("%s %s %s %s %s", user.Id, user.Alias, user.Email, user.Origin, user.Pswd)
+		fmt.Printf("%s %s %s %s [% x]\n", user.Id, user.Alias, user.Email, user.Origin, user.Pswd)
 	}
 	fmt.Printf("----- User count:%d\n\n", len(users))
 
 }
 
 // dynamodb.Scans table.  First page is returned as an array of pointers of the
-// type of the interface passed in.  eg exercise(t,svc, User{}) returns []*User
+// type of the interface passed in.  eg exercise(t,svc, Usr{}) returns []*Usr
 func exercise(t *testing.T, svc *dynamodb.DynamoDB, i interface{}) interface{} {
 	param := &dynamodb.ScanInput{
 		TableName: aws.String(TableName(i)),

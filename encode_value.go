@@ -5,6 +5,7 @@
 package dynaGo
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -59,7 +60,7 @@ func stringValueEncoder(e *valueEncoderState, n string, v reflect.Value) string 
 	return str
 }
 func structValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
-	i := getPartitionKey(v.Type())
+	i := GetPartitionKey(v.Type())
 	str := v.FieldByIndex(i).String()
 	if e != nil {
 		e.item[n] = &dynamodb.AttributeValue{S: &str}
@@ -71,6 +72,13 @@ func sliceValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
 	arrPtr := make([]*string, l)
 	arrEle := make([]string, l)
 	enc := valueEncoder(et)
+
+	// special case is []byte, which will look like []int8
+	if et.Kind() == reflect.Uint8 {
+		b := v.Interface().([]byte)
+		e.item[n] = &dynamodb.AttributeValue{B: b}
+		return "[" + fmt.Sprintf("% x", b) + "]"
+	}
 
 	for i := 0; i < l; i++ {
 		arrEle[i] = enc(nil, n, v.Index(i))

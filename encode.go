@@ -5,6 +5,7 @@
 package dynaGo
 
 import (
+	"errors"
 	"reflect"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -103,12 +104,16 @@ func (e *InvalidEncoderStateType) Error() string {
 func Marshal(i interface{}) *dynamodb.PutItemInput {
 	e := &valueEncoderState{make(map[string]*dynamodb.AttributeValue)}
 	encode(e, i)
-	tn := reflect.TypeOf(i).Name() + "s"
+	tn := TableName(i)
 	return &dynamodb.PutItemInput{Item: e.item, TableName: &tn}
 }
 
 func TableName(i interface{}) string {
-	return reflect.TypeOf(i).Name() + "s"
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.Name() + "s"
 }
 
 // Try to create a table if it doesn't already exist
@@ -152,6 +157,14 @@ func encode(e encoderState, i interface{}) {
 	t := v.Type()
 	et := reflect.TypeOf(e)
 
+	//allow one possible level of indirection
+	if t.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			panic(errors.New("Cannot encode nil ptr."))
+		}
+		t, v = t.Elem(), v.Elem()
+	}
+
 	if t.Kind() != reflect.Struct {
 		panic(&OnlyStructsSupportedError{t.Kind()})
 	}
@@ -164,7 +177,7 @@ func encode(e encoderState, i interface{}) {
 		}
 	case *valueEncoderState:
 		ftr = func(fs reflect.StructField, fv reflect.Value) bool {
-			fn := getAttrName(fs)
+			fn := GetAttrName(fs)
 			valueEncoder(fs.Type)(es, fn, fv)
 			return true
 		}
@@ -203,7 +216,7 @@ func tableExists(svc *dynamodb.DynamoDB, tn string) error {
 // THIS METHOD PANICS IF the tags name the field
 // "HASH", or "RANGE" as this is assumed to be a
 // mistake (missing leading comma in field tag)
-func getAttrName(s reflect.StructField) string {
+func GetAttrName(s reflect.StructField) string {
 	fn, _ := parseTag(s.Tag.Get("dynaGo"))
 	if fn == dynamodb.KeyTypeHash || fn == dynamodb.KeyTypeRange {
 		panic(&FieldNameCannotBeError{fn})
@@ -232,7 +245,7 @@ func getKeyType(s reflect.StructField, v reflect.Value) (string, error) {
 
 // depth-first pursuit of a partition key through structs marked HASH
 // if a string is not found at a leaf, this method will panic.
-func getPartitionKey(t reflect.Type) []int {
+func GetPartitionKey(t reflect.Type) []int {
 	for n := 0; n < t.NumField(); n++ {
 		f := t.Field(n)
 		_, opts := parseTag(f.Tag.Get("dynaGo"))
@@ -245,7 +258,7 @@ func getPartitionKey(t reflect.Type) []int {
 		case reflect.String:
 			return []int{n}
 		case reflect.Struct:
-			return append([]int{n}, getPartitionKey(f.Type)...)
+			return append([]int{n}, GetPartitionKey(f.Type)...)
 		}
 	}
 	panic(&MissingPartitionKeyError{t})
