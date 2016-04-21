@@ -125,19 +125,19 @@ var svc = dynamodb.New(
 
 func TestEncodeTables(t *testing.T) {
 	t.Log(`create table 'Tags'`)
-	if err := createTable(svc, Tag{}, 1, 1); err != nil {
+	if err := CreateTable(svc, Tag{}, 1, 1); err != nil {
 		t.Error(err)
 	}
 	t.Log(`create table 'Usrs'`)
-	if err := createTable(svc, Usr{}, 1, 1); err != nil {
+	if err := CreateTable(svc, Usr{}, 1, 1); err != nil {
 		t.Error(err)
 	}
 	t.Log(`create table 'Sessions'`)
-	if err := createTable(svc, Session{}, 1, 1); err != nil {
+	if err := CreateTable(svc, Session{}, 1, 1); err != nil {
 		t.Error(err)
 	}
 	t.Log(`create table 'Messages'`)
-	if err := createTable(svc, Message{}, 1, 1); err != nil {
+	if err := CreateTable(svc, Message{}, 1, 1); err != nil {
 		t.Error(err)
 	}
 }

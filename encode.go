@@ -120,7 +120,7 @@ func TableName(i interface{}) string {
 // If it does exist or cannot be created, return error
 //   - Tables are created from structs only, and will panic on any other type
 //   - Table name will be [structName] + s (ie type Doc struct {...} => table "Docs")
-func createTable(svc *dynamodb.DynamoDB, v interface{}, w int64, r int64) error {
+func CreateTable(svc *dynamodb.DynamoDB, v interface{}, w int64, r int64) error {
 	tn := TableName(v)
 	if err := tableExists(svc, tn); err != nil {
 		return err
