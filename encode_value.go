@@ -54,7 +54,7 @@ func intValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
 }
 func stringValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
 	str := v.String()
-	if e != nil {
+	if str != "" && e != nil {
 		e.item[n] = &dynamodb.AttributeValue{S: &str}
 	}
 	return str

@@ -184,7 +184,7 @@ func TestEncodeValues(t *testing.T) {
 	b, _ := hex.DecodeString("ab091cf3")
 	usr := Usr{
 		Id:     "1000",
-		Origin: "home",
+		Origin: "",
 		Pswd:   b,
 		Email:  "guy@home.org",
 		Alias:  "guy",
