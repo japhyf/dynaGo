@@ -6,6 +6,9 @@ package dynaGo
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -142,9 +145,8 @@ func TestEncodeTables(t *testing.T) {
 	}
 }
 
-func TestEncodeValues(t *testing.T) {
-
-	ses0 := Session{
+var (
+	ses0 = Session{
 		Id: "abc",
 		Mentor: &Usr{
 			Id: "bobo",
@@ -156,7 +158,7 @@ func TestEncodeValues(t *testing.T) {
 		End:      time.Now().Unix() + 10,
 		Duration: 10,
 	}
-	ses1 := Session{
+	ses1 = Session{
 		Id: "def",
 		Mentor: &Usr{
 			Id: "obob",
@@ -168,27 +170,30 @@ func TestEncodeValues(t *testing.T) {
 		End:      time.Now().Unix() + 10,
 		Duration: 10,
 	}
-	msg := Message{
+	msg = Message{
 		Session:   &ses0,
 		Id:        "2unique",
 		Timestamp: time.Now().Unix(),
 		Body:      "it's sweat, what you smell is sweat.",
 	}
-	tag := Tag{
+	tag = Tag{
 		Name:     "talkietalk",
 		Id:       "123abc",
 		Sessions: []*Session{&ses0, &ses1},
 		Begin:    ses0.Begin + 1,
 		End:      ses1.End - 1,
 	}
-	b, _ := hex.DecodeString("ab091cf3")
-	usr := Usr{
+	b, _ = hex.DecodeString("ab091cf3")
+	usr  = Usr{
 		Id:     "1000",
 		Origin: "",
 		Pswd:   b,
 		Email:  "guy@home.org",
 		Alias:  "guy",
 	}
+)
+
+func TestEncodeValues(t *testing.T) {
 
 	t.Log("Put message...")
 	if _, err := svc.PutItem(Marshal(msg)); err != nil {
@@ -205,6 +210,36 @@ func TestEncodeValues(t *testing.T) {
 	t.Log("Put usr...")
 	if _, err := svc.PutItem(Marshal(usr)); err != nil {
 		t.Errorf("failed: %s", err.Error())
+	}
+}
+func TestGetValues(t *testing.T) {
+	t.Log("Get usr...")
+	tryGetValue(t, "1000", Usr{}, usr)
+	t.Log("Get ses..")
+	tryGetValue(t, "abc", Session{}, ses0)
+}
+
+func tryGetValue(t *testing.T, k interface{}, i interface{}, v interface{}) {
+	gi, _ := AsGetItemInput(k, i)
+	resp, err := svc.GetItem(gi)
+	if err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
+	if len(resp.Item) < 1 {
+		t.Errorf("failed: response for GetItem was incorrect length")
+	}
+	//construct new ptr
+	u := reflect.New(reflect.TypeOf(i)).Interface()
+	if err := Unmarshal(resp.Item, u); err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
+	//dereference pointer
+	e := reflect.ValueOf(u).Elem().Interface()
+	if !reflect.DeepEqual(e, v) {
+		b0, _ := json.Marshal(e)
+		b1, _ := json.Marshal(v)
+		t.Error(fmt.Sprintf("failed: GetItem response not equal to original item \n\t %T %s \n\t %T %s",
+			v, string(b1), e, string(b0)))
 	}
 
 }

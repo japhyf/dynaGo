@@ -76,7 +76,7 @@ func tableUnsupportedTypeEncoder(e *tableEncoderState, s reflect.StructField, v 
 }
 
 func attributeEncoder(e *tableEncoderState, s reflect.StructField, v reflect.Value, st string) string {
-	an := GetAttrName(s)
+	an := getAttrName(s)
 	kt, err := getKeyType(s, v)
 	//if this is not a key attribute, the table schema doesn't care
 	if err != nil {

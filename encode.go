@@ -7,6 +7,7 @@ package dynaGo
 import (
 	"errors"
 	"reflect"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
@@ -73,6 +74,23 @@ type InvalidEncoderStateType struct {
 
 func (e *InvalidEncoderStateType) Error() string {
 	return "dynaGo: Unknown EncoderState type: " + reflect.TypeOf(e.State).Name()
+}
+
+type KeyValueOfIncorrectType struct {
+	expect reflect.Kind
+	found  reflect.Kind
+}
+
+func (e *KeyValueOfIncorrectType) Error() string {
+	return "dynaGo: Expected key type: " + e.expect.String() + " found:" + e.found.String()
+}
+
+type UnsupportedtedKeyKindError struct {
+	Kind reflect.Kind
+}
+
+func (e *UnsupportedtedKeyKindError) Error() string {
+	return "dynaGo: partitionkey has unsupported kind - " + e.Kind.String()
 }
 
 // Marshal returns a dynamodb.PutItemInput representitive of i
@@ -177,7 +195,7 @@ func encode(e encoderState, i interface{}) {
 		}
 	case *valueEncoderState:
 		ftr = func(fs reflect.StructField, fv reflect.Value) bool {
-			fn := GetAttrName(fs)
+			fn := getAttrName(fs)
 			valueEncoder(fs.Type)(es, fn, fv)
 			return true
 		}
@@ -216,7 +234,7 @@ func tableExists(svc *dynamodb.DynamoDB, tn string) error {
 // THIS METHOD PANICS IF the tags name the field
 // "HASH", or "RANGE" as this is assumed to be a
 // mistake (missing leading comma in field tag)
-func GetAttrName(s reflect.StructField) string {
+func getAttrName(s reflect.StructField) string {
 	fn, _ := parseTag(s.Tag.Get("dynaGo"))
 	if fn == dynamodb.KeyTypeHash || fn == dynamodb.KeyTypeRange {
 		panic(&FieldNameCannotBeError{fn})
@@ -245,7 +263,7 @@ func getKeyType(s reflect.StructField, v reflect.Value) (string, error) {
 
 // depth-first pursuit of a partition key through structs marked HASH
 // if a string is not found at a leaf, this method will panic.
-func GetPartitionKey(t reflect.Type) []int {
+func getPartitionKey(t reflect.Type) []int {
 	for n := 0; n < t.NumField(); n++ {
 		f := t.Field(n)
 		_, opts := parseTag(f.Tag.Get("dynaGo"))
@@ -258,8 +276,55 @@ func GetPartitionKey(t reflect.Type) []int {
 		case reflect.String:
 			return []int{n}
 		case reflect.Struct:
-			return append([]int{n}, GetPartitionKey(f.Type)...)
+			return append([]int{n}, getPartitionKey(f.Type)...)
 		}
 	}
 	panic(&MissingPartitionKeyError{t})
+}
+
+// To put items to dynamoDB is one thing (Marshal), but to get items from
+// dynamoDB often requires a GetItemInput (if the item is fetched by key directly)
+// this method will convert a struct i with a key value kv to a GetItemInput
+// as long as the struct is properly tagged, and the kv is of the expected type
+func AsGetItemInput(k interface{}, i interface{}) (*dynamodb.GetItemInput, error) {
+	v := reflect.ValueOf(i)
+	//panics if not found
+	ix := getPartitionKey(v.Type())
+	tn := TableName(i)
+
+	fv, ft := v.FieldByIndex(ix), v.Type().FieldByIndex(ix)
+	fn := getAttrName(ft)
+	var kv *dynamodb.AttributeValue
+	switch fv.Type().Kind() {
+	case reflect.String:
+		s, ok := k.(string)
+		if !ok {
+			return nil, &KeyValueOfIncorrectType{reflect.String, reflect.TypeOf(k).Kind()}
+		}
+		kv = &dynamodb.AttributeValue{S: &s}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v := reflect.ValueOf(k)
+		if !isInt(v) {
+			return nil, &KeyValueOfIncorrectType{reflect.Int, v.Kind()}
+		}
+		s := strconv.FormatInt(v.Int(), 10)
+		kv = &dynamodb.AttributeValue{N: &s}
+	default:
+		panic(&UnsupportedtedKeyKindError{fv.Type().Kind()})
+	}
+
+	return &dynamodb.GetItemInput{
+		TableName: &tn,
+		Key:       map[string]*dynamodb.AttributeValue{fn: kv},
+	}, nil
+
+}
+
+// check if value is an int.. helper for AsGetItemInput
+func isInt(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	}
+	return false
 }

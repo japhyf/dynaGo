@@ -82,7 +82,7 @@ func exercise(t *testing.T, svc *dynamodb.DynamoDB, i interface{}) interface{} {
 	items := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(rt)), l, l)
 	for n, item := range resp.Items {
 		o := reflect.New(rt)
-		if err = Decode(item, o.Interface()); err != nil {
+		if err = Unmarshal(item, o.Interface()); err != nil {
 			t.Error(err)
 		}
 		items.Index(n).Set(o)

@@ -42,7 +42,7 @@ func (e UnsupportedArrayElementType) Error() string {
 // map[string]*dynamodb.AttributeValue, where  string is the
 // fieldname (or overriden by the dynaGo: fieldtag) and the
 // atributeValue is the value to be stored in the field.
-func Decode(m map[string]*dynamodb.AttributeValue, i interface{}) error {
+func Unmarshal(m map[string]*dynamodb.AttributeValue, i interface{}) error {
 	rv := reflect.ValueOf(i)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return &InvalidDecodeError{rv.Type()}
@@ -157,7 +157,7 @@ func newExploder(t reflect.Type) exploder {
 			return arr
 		}
 	case reflect.Struct:
-		i := GetPartitionKey(t)
+		i := getPartitionKey(t)
 		return newExploder(t.FieldByIndex(i).Type)
 	case reflect.Ptr:
 		return newExploder(t.Elem())
@@ -170,7 +170,7 @@ func newExploder(t reflect.Type) exploder {
 //dynaGo only Stores one layer of values, so we have to find the Hash key field,
 //compose the hierarchy above the field, and set that with the attribute value.
 func structDecoder(av *dynamodb.AttributeValue, rv reflect.Value) {
-	i := GetPartitionKey(rv.Type())
+	i := getPartitionKey(rv.Type())
 	structCompose(rv, i)
 	fv := rv.FieldByIndex(i)
 	decoder(fv.Type())(av, fv)
@@ -224,7 +224,7 @@ type field struct {
 
 func newField(sf reflect.StructField) field {
 	return field{
-		name:  GetAttrName(sf),
+		name:  getAttrName(sf),
 		index: sf.Index,
 		typ:   sf.Type,
 	}
