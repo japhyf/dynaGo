@@ -148,11 +148,8 @@ func TestEncodeTables(t *testing.T) {
 var (
 	ses0 = Session{
 		Id: "abc",
-		Mentor: &Usr{
+		Admin: &Usr{
 			Id: "bobo",
-		},
-		Mentee: &Usr{
-			Id: "hooch",
 		},
 		Begin:    time.Now().Unix(),
 		End:      time.Now().Unix() + 10,
@@ -160,11 +157,8 @@ var (
 	}
 	ses1 = Session{
 		Id: "def",
-		Mentor: &Usr{
+		Admin: &Usr{
 			Id: "obob",
-		},
-		Mentee: &Usr{
-			Id: "oohhc",
 		},
 		Begin:    time.Now().Unix(),
 		End:      time.Now().Unix() + 10,
@@ -183,13 +177,38 @@ var (
 		Begin:    ses0.Begin + 1,
 		End:      ses1.End - 1,
 	}
-	b, _ = hex.DecodeString("ab091cf3")
-	usr  = Usr{
+	b0, _ = hex.DecodeString("ab091cf3")
+	b1, _ = hex.DecodeString("aefc0e24")
+	usr0  = Usr{
 		Id:     "1000",
 		Origin: "",
-		Pswd:   b,
-		Email:  "guy@home.org",
-		Alias:  "guy",
+		Pswd:   b0,
+		Email:  "bob@home.org",
+		Alias:  "bob",
+	}
+	usr1 = Usr{
+		Id:     "2000",
+		Origin: "",
+		Pswd:   b1,
+		Email:  "alice@home.org",
+		Alias:  "alice",
+	}
+	sum0 = SessionUsrMap{
+		Usr: &Usr{
+			Id: "1000",
+		},
+		Session: &Session{
+			Id: "abc",
+		},
+	}
+
+	sum1 = SessionUsrMap{
+		Usr: &Usr{
+			Id: "2000",
+		},
+		Session: &Session{
+			Id: "abc",
+		},
 	}
 )
 
@@ -208,19 +227,33 @@ func TestEncodeValues(t *testing.T) {
 		t.Errorf("failed: %s", err.Error())
 	}
 	t.Log("Put usr...")
-	if _, err := svc.PutItem(Marshal(usr)); err != nil {
-		t.Errorf("failed: %s", err.Error())
+	if _, err := svc.PutItem(Marshal(usr0)); err != nil {
+		t.Errorf("usr0 failed: %s", err.Error())
+	}
+	if _, err := svc.PutItem(Marshal(usr1)); err != nil {
+		t.Errorf("usr1 failed: %s", err.Error())
+	}
+	t.Log("Put sum...")
+	if _, err := svc.PutItem(Marshal(sum0)); err != nil {
+		t.Errorf("sum0 failed: %s", err.Error())
+	}
+	if _, err := svc.PutItem(Marshal(sum1)); err != nil {
+		t.Errorf("sum1 failed: %s", err.Error())
 	}
 }
 func TestGetValues(t *testing.T) {
-	t.Log("Get usr...")
-	tryGetValue(t, "1000", Usr{}, usr)
+	t.Log("Get usr0...")
+	tryGetValue(t, Usr{}, usr0, "1000")
+	t.Log("Get usr1...")
+	tryGetValue(t, Usr{}, usr1, "2000")
 	t.Log("Get ses..")
-	tryGetValue(t, "abc", Session{}, ses0)
+	tryGetValue(t, Session{}, ses0, "abc")
+	t.Log("Get sum.")
+	tryGetValue(t, SessionUsrMap{}, sum0, usr0.Id, ses0.Id)
 }
 
-func tryGetValue(t *testing.T, k interface{}, i interface{}, v interface{}) {
-	gi, _ := AsGetItemInput(k, i)
+func tryGetValue(t *testing.T, i interface{}, v interface{}, k ...interface{}) {
+	gi, _ := AsGetItemInput(i, k...)
 	resp, err := svc.GetItem(gi)
 	if err != nil {
 		t.Errorf("failed: %s", err.Error())
@@ -262,13 +295,16 @@ type Usr struct {
 
 type Session struct {
 	Id       string `dynaGo:"SessionId,HASH"`
-	Mentor   *Usr
-	Mentee   *Usr
+	Admin    *Usr
 	Begin    int64
-	End      int64 `dynaGo:",RANGE"`
+	End      int64
 	Duration int64
 }
 
+type SessionUsrMap struct {
+	Usr     *Usr     `dynaGo:",HASH"`
+	Session *Session `dynaGo:",RANGE"`
+}
 type Message struct {
 	Session   *Session `dynaGo:"SessionId,HASH"`
 	Timestamp int64    `dynaGo:",RANGE"`
