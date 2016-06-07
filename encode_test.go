@@ -87,7 +87,7 @@ var TablesSchema = map[string]*dynamodb.CreateTableInput{
 			ReadCapacityUnits:  aws.Int64(1),
 			WriteCapacityUnits: aws.Int64(1),
 		},
-	},
+},
 	"Tags": &dynamodb.CreateTableInput{
 		TableName: aws.String("Tags"),
 		KeySchema: []*dynamodb.KeySchemaElement{
@@ -241,6 +241,29 @@ func TestEncodeValues(t *testing.T) {
 		t.Errorf("sum1 failed: %s", err.Error())
 	}
 }
+func TestGetBatchItem(t *testing.T) {
+	bi := &dynamodb.BatchGetItemInput{}
+	k, err := CreateKey(reflect.TypeOf(usr0), "1000")
+	if err != nil {
+		t.Errorf("could not create key Usr{\"UserId\":\"1000\"}")
+	}
+	k.AppendToBatchGet(bi)
+	k, err = CreateKey(reflect.TypeOf(usr0), "2000")
+	if err != nil {
+		t.Errorf("could not create key Usr{\"UserId\":\"2000\"}")
+	}
+	k.AppendToBatchGet(bi)
+	//do get
+	resp, err := svc.BatchGetItem(bi)
+	if err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
+	r := resp.Responses[TableName(reflect.TypeOf(usr0))]
+	if len(r) < 2 {
+		t.Errorf("failed: response for BatchGetItem was incorrect length")
+	}
+	t.Log(r)
+}
 func TestGetValues(t *testing.T) {
 	t.Log("Get usr0...")
 	tryGetValue(t, Usr{}, usr0, "1000")
@@ -253,7 +276,8 @@ func TestGetValues(t *testing.T) {
 }
 
 func tryGetValue(t *testing.T, i interface{}, v interface{}, k ...interface{}) {
-	gi, _ := AsGetItemInput(i, k...)
+	key, _ := CreateKey(reflect.TypeOf(i), k...)
+	gi := key.GetItemInput()
 	resp, err := svc.GetItem(gi)
 	if err != nil {
 		t.Errorf("failed: %s", err.Error())

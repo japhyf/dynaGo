@@ -124,12 +124,11 @@ func (e *UnsupportedKeyKindError) Error() string {
 func Marshal(i interface{}) *dynamodb.PutItemInput {
 	e := &valueEncoderState{make(map[string]*dynamodb.AttributeValue)}
 	encode(e, i)
-	tn := TableName(i)
+	tn := TableName(reflect.TypeOf(i))
 	return &dynamodb.PutItemInput{Item: e.item, TableName: &tn}
 }
 
-func TableName(i interface{}) string {
-	t := reflect.TypeOf(i)
+func TableName(t reflect.Type) string {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
@@ -141,7 +140,7 @@ func TableName(i interface{}) string {
 //   - Tables are created from structs only, and will panic on any other type
 //   - Table name will be [structName] + s (ie type Doc struct {...} => table "Docs")
 func CreateTable(svc *dynamodb.DynamoDB, v interface{}, w int64, r int64) error {
-	tn := TableName(v)
+	tn := TableName(reflect.TypeOf(v))
 	if err := tableExists(svc, tn); err != nil {
 		return err
 	}
@@ -266,11 +265,12 @@ func getKeyType(s reflect.StructField, v reflect.Value) (string, error) {
 // depth-first pursuit of a partition key through structs marked HASH
 // if a string is not found at a leaf, this method will panic.
 func getPartitionKey(t reflect.Type) []int {
-	return getKey(t, dynamodb.KeyTypeHash)
+	return getKeyAttributePath(t, dynamodb.KeyTypeHash)
 }
 
 // depth-first pursuit of a range key through structs marked RANGE
-// if a string is not found at a leaf, returns MissingKeyError
+// in the origin struct, and HASH thereafter (as depth increases
+// beyond 0).if a string is not found at a leaf, returns MissingKeyError
 func getRangeKey(t reflect.Type) (i []int, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -283,7 +283,7 @@ func getRangeKey(t reflect.Type) (i []int, err error) {
 			err = r.(error)
 		}
 	}()
-	i, err = getKey(t, dynamodb.KeyTypeRange), nil
+	i, err = getKeyAttributePath(t, dynamodb.KeyTypeRange), nil
 	return
 }
 
@@ -291,7 +291,7 @@ func getRangeKey(t reflect.Type) (i []int, err error) {
 // the RANGE KeyType (kt) - is only relevant for struct depth 0
 // ie. if the RANGE key type is a struct, this method returns the
 //     HASH Key of the child type for the RANGE
-func getKey(t reflect.Type, kt string) []int {
+func getKeyAttributePath(t reflect.Type, kt string) []int {
 	for n := 0; n < t.NumField(); n++ {
 		f := t.Field(n)
 		_, opts := parseTag(f.Tag.Get("dynaGo"))
@@ -301,14 +301,19 @@ func getKey(t reflect.Type, kt string) []int {
 		switch f.Type.Kind() {
 		//int?  not yet.
 		case reflect.Ptr:
-			return append([]int{n}, getKey(f.Type.Elem(), dynamodb.KeyTypeHash)...)
+			return append([]int{n}, getKeyAttributePath(f.Type.Elem(), dynamodb.KeyTypeHash)...)
 		case reflect.String:
 			return []int{n}
 		case reflect.Struct:
-			return append([]int{n}, getKey(f.Type, dynamodb.KeyTypeHash)...)
+			return append([]int{n}, getKeyAttributePath(f.Type, dynamodb.KeyTypeHash)...)
 		}
 	}
 	panic(&MissingKeyError{t, kt})
+}
+
+type Key struct {
+	tbln string
+	attr map[string]*dynamodb.AttributeValue
 }
 
 // To put items to dynamoDB is one thing (Marshal), but to get items from
@@ -316,52 +321,70 @@ func getKey(t reflect.Type, kt string) []int {
 // this method will convert a struct i with a key value ...k [partition key, rangekey]
 // to a GetItemInput as long as the struct is properly tagged, and the
 // partition key and range key are of the type descibed by the struct
-func AsGetItemInput(i interface{}, k ...interface{}) (*dynamodb.GetItemInput, error) {
+//
+// This method may have some logical overlap with encode()
+// should look into that someday.  May just be able to grab the KeySchema?
+func CreateKey(t reflect.Type, vs ...interface{}) (Key, error) {
 	//sanity check
-	if len(k) < 1 {
-		return nil, errors.New("dynaGo: no partition key provided for GetItemInput")
+	if len(vs) < 1 {
+		return Key{}, errors.New("dynaGo: no partition key provided for GetItemInput")
 	}
-	v := reflect.ValueOf(i)
-	m := make(map[string]*dynamodb.AttributeValue)
+	k := Key{
+		tbln: TableName(t),
+		attr: make(map[string]*dynamodb.AttributeValue),
+	}
 
 	//partition key, panics if not found
-	pki := getPartitionKey(v.Type())
-	pkn, pka, err := getKeynameAndAttribute(v, pki, k[0])
+	pki := getPartitionKey(t)
+	pkn, pka, err := getKeynameAndAttribute(t, pki, vs[0])
 	if err != nil {
-		return nil, err
+		return Key{}, err
 	}
-	m[pkn] = pka
+	k.attr[pkn] = pka
 
 	//range key may not exist
-	rki, err := getRangeKey(v.Type())
+	rki, err := getRangeKey(t)
 	if err == nil {
-		if len(k) < 2 {
-			return nil, errors.New("dynaGo: range key found, no value provided for GetItemInput")
+		if len(vs) < 2 {
+			return Key{}, errors.New("dynaGo: range key found, no value provided for GetItemInput")
 		}
-		rkn, rka, err := getKeynameAndAttribute(v, rki, k[1])
+		rkn, rka, err := getKeynameAndAttribute(t, rki, vs[1])
 		if err != nil {
-			return nil, err
+			return Key{}, err
 		}
-		m[rkn] = rka
+		k.attr[rkn] = rka
 	}
 
-	//create GetItemInput
-	tn := TableName(i)
-	return &dynamodb.GetItemInput{
-		TableName: &tn,
-		Key:       m,
-	}, nil
+	return k, nil
+
 }
 
-func getKeynameAndAttribute(v reflect.Value, i []int, k interface{}) (kn string, ka *dynamodb.AttributeValue, err error) {
+func (k *Key) GetItemInput() *dynamodb.GetItemInput {
+	return &dynamodb.GetItemInput{
+		TableName: &k.tbln,
+		Key:       k.attr,
+	}
+}
+
+func (k *Key) AppendToBatchGet(b *dynamodb.BatchGetItemInput) {
+	if b.RequestItems == nil {
+		b.RequestItems = make(map[string]*dynamodb.KeysAndAttributes)
+	}
+	if _, ok := b.RequestItems[k.tbln]; !ok {
+		b.RequestItems[k.tbln] = &dynamodb.KeysAndAttributes{}
+	}
+	b.RequestItems[k.tbln].Keys = append(b.RequestItems[k.tbln].Keys, k.attr)
+}
+
+func getKeynameAndAttribute(t reflect.Type, i []int, k interface{}) (kn string, ka *dynamodb.AttributeValue, err error) {
 	//value from leaf
-	sf := v.Type().FieldByIndex(i)
+	sf := t.FieldByIndex(i)
 	ka, err = createAttribute(sf, k)
 	if err != nil {
 		return "", nil, err
 	}
 	//name from root
-	rootkf := v.Type().Field(i[0])
+	rootkf := t.Field(i[0])
 	kn = getAttrName(rootkf)
 	return
 }

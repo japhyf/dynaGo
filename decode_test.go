@@ -73,7 +73,7 @@ func TestDecode(t *testing.T) {
 // type of the interface passed in.  eg exercise(t,svc, Usr{}) returns []*Usr
 func exercise(t *testing.T, svc *dynamodb.DynamoDB, i interface{}) interface{} {
 	param := &dynamodb.ScanInput{
-		TableName: aws.String(TableName(i)),
+		TableName: aws.String(TableName(reflect.TypeOf(i))),
 	}
 
 	resp, err := svc.Scan(param)
