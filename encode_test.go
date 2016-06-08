@@ -243,16 +243,17 @@ func TestEncodeValues(t *testing.T) {
 }
 func TestGetBatchItem(t *testing.T) {
 	bi := &dynamodb.BatchGetItemInput{}
-	k, err := CreateKey(reflect.TypeOf(usr0), "1000")
-	if err != nil {
+	usr_km := CreateKeyMaker(reflect.TypeOf(usr0))
+	tag_km := CreateKeyMaker(reflect.TypeOf(tag))
+	if err := AppendToBatchGet(bi, usr_km, "1000"); err != nil {
 		t.Errorf("could not create key Usr{\"UserId\":\"1000\"}")
 	}
-	k.AppendToBatchGet(bi)
-	k, err = CreateKey(reflect.TypeOf(usr0), "2000")
-	if err != nil {
+	if err := AppendToBatchGet(bi, usr_km, "2000"); err != nil {
 		t.Errorf("could not create key Usr{\"UserId\":\"2000\"}")
 	}
-	k.AppendToBatchGet(bi)
+	if err := AppendToBatchGet(bi, tag_km, "talkietalk", 1234); err != nil {
+		t.Errorf("could not create key tag{\"Name\":\"talkietalk\"}:: " + err.Error())
+	}
 	//do get
 	resp, err := svc.BatchGetItem(bi)
 	if err != nil {
@@ -276,8 +277,11 @@ func TestGetValues(t *testing.T) {
 }
 
 func tryGetValue(t *testing.T, i interface{}, v interface{}, k ...interface{}) {
-	key, _ := CreateKey(reflect.TypeOf(i), k...)
-	gi := key.GetItemInput()
+	km := CreateKeyMaker(reflect.TypeOf(i))
+	gi, err := GetItemInput(km, k...)
+	if err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
 	resp, err := svc.GetItem(gi)
 	if err != nil {
 		t.Errorf("failed: %s", err.Error())
