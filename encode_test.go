@@ -149,7 +149,10 @@ var (
 	ses0 = Session{
 		Id: "abc",
 		Admin: &Usr{
-			Id: "bobo",
+			Id: "1000",
+		},
+		Usr: &Usr{
+			Id: "1000",
 		},
 		Begin:    time.Now().Unix(),
 		End:      time.Now().Unix() + 10,
@@ -158,7 +161,10 @@ var (
 	ses1 = Session{
 		Id: "def",
 		Admin: &Usr{
-			Id: "obob",
+			Id: "1000",
+		},
+		Usr: &Usr{
+			Id: "2000",
 		},
 		Begin:    time.Now().Unix(),
 		End:      time.Now().Unix() + 10,
@@ -193,23 +199,6 @@ var (
 		Email:  "alice@home.org",
 		Alias:  "alice",
 	}
-	sum0 = SessionUsrMap{
-		Usr: &Usr{
-			Id: "1000",
-		},
-		Session: &Session{
-			Id: "abc",
-		},
-	}
-
-	sum1 = SessionUsrMap{
-		Usr: &Usr{
-			Id: "2000",
-		},
-		Session: &Session{
-			Id: "abc",
-		},
-	}
 )
 
 func TestEncodeValues(t *testing.T) {
@@ -222,6 +211,9 @@ func TestEncodeValues(t *testing.T) {
 	if _, err := svc.PutItem(Marshal(ses0)); err != nil {
 		t.Errorf("failed: %s", err.Error())
 	}
+	if _, err := svc.PutItem(Marshal(ses1)); err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
 	t.Log("Put tag...")
 	if _, err := svc.PutItem(Marshal(tag)); err != nil {
 		t.Errorf("failed: %s", err.Error())
@@ -232,13 +224,6 @@ func TestEncodeValues(t *testing.T) {
 	}
 	if _, err := svc.PutItem(Marshal(usr1)); err != nil {
 		t.Errorf("usr1 failed: %s", err.Error())
-	}
-	t.Log("Put sum...")
-	if _, err := svc.PutItem(Marshal(sum0)); err != nil {
-		t.Errorf("sum0 failed: %s", err.Error())
-	}
-	if _, err := svc.PutItem(Marshal(sum1)); err != nil {
-		t.Errorf("sum1 failed: %s", err.Error())
 	}
 }
 func TestGetBatchItem(t *testing.T) {
@@ -265,6 +250,19 @@ func TestGetBatchItem(t *testing.T) {
 	}
 	t.Log(r)
 }
+
+func TestQueryOnPartition(t *testing.T) {
+	km := CreateKeyMaker(reflect.TypeOf(ses0))
+	qi, err := QueryOnPartition(km, usr0.Id)
+	if err != nil {
+		t.Errorf("failed: %s", err.Error())
+	}
+	resp, err := svc.Query(qi)
+	if err != nil {
+		t.Errorf("failed: query: %s", err.Error())
+	}
+	t.Log(resp)
+}
 func TestGetValues(t *testing.T) {
 	t.Log("Get usr0...")
 	tryGetValue(t, Usr{}, usr0, "1000")
@@ -272,8 +270,6 @@ func TestGetValues(t *testing.T) {
 	tryGetValue(t, Usr{}, usr1, "2000")
 	t.Log("Get ses..")
 	tryGetValue(t, Session{}, ses0, "abc")
-	t.Log("Get sum.")
-	tryGetValue(t, SessionUsrMap{}, sum0, usr0.Id, ses0.Id)
 }
 
 func tryGetValue(t *testing.T, i interface{}, v interface{}, k ...interface{}) {
@@ -322,17 +318,14 @@ type Usr struct {
 }
 
 type Session struct {
-	Id       string `dynaGo:"SessionId,HASH"`
 	Admin    *Usr
+	Usr      *Usr   `dynaGo:",HASH"`
+	Id       string `dynaGo:"SessionId,RANGE"`
 	Begin    int64
 	End      int64
 	Duration int64
 }
 
-type SessionUsrMap struct {
-	Usr     *Usr     `dynaGo:",HASH"`
-	Session *Session `dynaGo:",RANGE"`
-}
 type Message struct {
 	Session   *Session `dynaGo:"SessionId,HASH"`
 	Timestamp int64    `dynaGo:",RANGE"`

@@ -19,6 +19,8 @@ import (
 // the moment.
 
 type key struct {
+	pkn  string
+	rkn  string
 	tbln string
 	attr map[string]*dynamodb.AttributeValue
 }
@@ -48,7 +50,7 @@ func CreateKeyMaker(t reflect.Type) KeyMaker {
 	if err != nil {
 		// no range key
 		return func(ks ...interface{}) (key, error) {
-			if len(ks) != 1 {
+			if len(ks) < 1 {
 				es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
 				return key{}, errors.New(es)
 			}
@@ -56,6 +58,7 @@ func CreateKeyMaker(t reflect.Type) KeyMaker {
 			if err != nil {
 				return key{}, err
 			}
+			priK.pkn = k
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
 			priK.attr[k] = &v
 
@@ -67,7 +70,7 @@ func CreateKeyMaker(t reflect.Type) KeyMaker {
 	}
 
 	return func(ks ...interface{}) (key, error) {
-		if len(ks) != 2 {
+		if len(ks) < 2 {
 			es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
 			return key{}, errors.New(es)
 		}
@@ -75,6 +78,7 @@ func CreateKeyMaker(t reflect.Type) KeyMaker {
 		if err != nil {
 			return key{}, err
 		}
+		priK.pkn = pk
 		priK.attr = make(map[string]*dynamodb.AttributeValue)
 		priK.attr[pk] = &pv
 
@@ -82,6 +86,7 @@ func CreateKeyMaker(t reflect.Type) KeyMaker {
 		if err != nil {
 			return key{}, err
 		}
+		priK.rkn = rk
 		priK.attr[rk] = &rv
 		return priK, nil
 	}
@@ -111,6 +116,23 @@ func AppendToBatchGet(b *dynamodb.BatchGetItemInput, km KeyMaker, kv ...interfac
 	}
 	b.RequestItems[k.tbln].Keys = append(b.RequestItems[k.tbln].Keys, k.attr)
 	return err
+}
+func QueryOnPartition(km KeyMaker, kv interface{}) (*dynamodb.QueryInput, error) {
+	kce := "#name = :value"
+	k, err := km(kv, "")
+	if err != nil {
+		return nil, err
+	}
+	return &dynamodb.QueryInput{
+		TableName: &k.tbln,
+		ExpressionAttributeNames: map[string]*string{
+			"#name": &k.pkn,
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":value": k.attr[k.pkn],
+		},
+		KeyConditionExpression: &kce,
+	}, nil
 }
 
 // depth-first pursuit of a partition key through structs marked HASH
