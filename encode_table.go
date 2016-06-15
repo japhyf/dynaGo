@@ -21,8 +21,8 @@ func (e *tableEncoderState) Error(err error) {
 
 func tableEncoder(t reflect.Type) tableEncoderFunc {
 	switch t.Kind() {
-	case reflect.Slice:
-		return sliceTableEncoder
+	case reflect.Slice, reflect.Map:
+		return notAllowedTableEncoder
 	case reflect.Struct:
 		return structTableEncoder
 	case reflect.String:
@@ -47,7 +47,7 @@ func stringTableEncoder(e *tableEncoderState, s reflect.StructField, v reflect.V
 func structTableEncoder(e *tableEncoderState, s reflect.StructField, v reflect.Value) string {
 	return attributeEncoder(e, s, v, dynamodb.ScalarAttributeTypeS)
 }
-func sliceTableEncoder(e *tableEncoderState, s reflect.StructField, v reflect.Value) string {
+func notAllowedTableEncoder(e *tableEncoderState, s reflect.StructField, v reflect.Value) string {
 	if _, err := getKeyType(s, v); err == nil {
 		e.Error(&TableKeyCannotBeTypeError{v.Type()})
 	}
