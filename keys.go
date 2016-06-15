@@ -35,7 +35,16 @@ type KeyMaker func(...interface{}) (key, error)
 //
 // This method may have some logical overlap with encode()
 // should look into that someday.  May just be able to grab the KeySchema?
-func CreateKeyMaker(t reflect.Type) KeyMaker {
+func CreateKeyMaker(rt reflect.Type) KeyMaker {
+	//allow pointers to struct
+	var t reflect.Type
+	switch rt.Kind() {
+	case reflect.Ptr:
+		t = rt.Elem()
+	default:
+		t = rt
+	}
+
 	priK := key{
 		tbln: TableName(t),
 	}
