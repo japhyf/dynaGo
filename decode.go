@@ -69,6 +69,8 @@ func decoder(t reflect.Type) decoderFunc {
 		return intDecoder
 	case reflect.Ptr:
 		return newPtrDecoder(t)
+	case reflect.Map:
+		return newMapDecoder(t)
 	case reflect.Struct:
 		return structDecoder
 	case reflect.Slice, reflect.Array:
@@ -207,6 +209,32 @@ func (pd *ptrDecoder) decode(av *dynamodb.AttributeValue, rv reflect.Value) {
 }
 func newPtrDecoder(t reflect.Type) decoderFunc {
 	dec := &ptrDecoder{decoder(t.Elem())}
+	return dec.decode
+}
+
+type mapDecoder struct {
+	elemDecoder decoderFunc
+}
+
+func (md *mapDecoder) decode(av *dynamodb.AttributeValue, rv reflect.Value) {
+	t := rv.Type()
+	elt := rv.Type().Elem()
+	if t.Key().Kind() != reflect.String {
+		panic(UnsupportedTypeDecoderError{rv.Type()})
+	}
+	if rv.IsNil() {
+		rv.Set(reflect.MakeMap(t))
+	}
+	for k, av := range av.M {
+		kv := reflect.ValueOf(k)
+		ev := reflect.New(elt).Elem()
+		md.elemDecoder(av, ev)
+		rv.SetMapIndex(kv, ev)
+	}
+}
+
+func newMapDecoder(t reflect.Type) decoderFunc {
+	dec := &mapDecoder{decoder(t.Elem())}
 	return dec.decode
 }
 

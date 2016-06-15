@@ -30,7 +30,7 @@ func TestDecode(t *testing.T) {
 	msgs := exercise(t, svc, Message{}).([]*Message)
 	for _, msg := range msgs {
 		then := time.Unix(msg.Timestamp, 0)
-		t.Log(then.String() + ` [ ` + msg.Id + ` ] "` + msg.Body + `" ` + msg.Session.Id)
+		t.Logf("%s [ %s ] %s %s", then.String(), msg.Id, msg.Origin, msg.SessId)
 	}
 	t.Logf("----- Message count:%d\n\n", len(msgs))
 

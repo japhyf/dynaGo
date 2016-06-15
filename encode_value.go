@@ -27,6 +27,8 @@ func valueEncoder(t reflect.Type) valueEncoderFunc {
 		return intValueEncoder
 	case reflect.Ptr:
 		return newPtrValueEncoder(t)
+	case reflect.Map:
+		return newMapValueEncoder(t)
 	default:
 		return valueUnsupportedTypeEncoder
 	}
@@ -93,6 +95,36 @@ func sliceValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
 		}
 	}
 	return "[" + strings.Join(arrEle, ",") + "]"
+}
+
+type mapValueEncoder struct {
+	elemEnc valueEncoderFunc
+}
+
+// this won't work as expected for map[string]interface{}
+// the method expects a uniform map value type
+func (me *mapValueEncoder) encode(e *valueEncoderState, n string, v reflect.Value) string {
+	if v.IsNil() {
+		return ""
+	}
+	ks := v.MapKeys()
+	arrEle := make([]string, 0, len(ks))
+	ms := &valueEncoderState{make(map[string]*dynamodb.AttributeValue)}
+	for _, k := range ks {
+		kn, kv := k.String(), v.MapIndex(k)
+		arrEle = append(arrEle, kn+":"+kv.String())
+		me.elemEnc(ms, kn, kv)
+	}
+	e.item[n] = &dynamodb.AttributeValue{M: ms.item}
+	return "{" + strings.Join(arrEle, ",") + "}"
+}
+
+func newMapValueEncoder(t reflect.Type) valueEncoderFunc {
+	if t.Key().Kind() != reflect.String {
+		return valueUnsupportedTypeEncoder
+	}
+	enc := &mapValueEncoder{valueEncoder(t.Elem())}
+	return enc.encode
 }
 
 // the pointer will have a single sustained type no matter how

@@ -171,9 +171,10 @@ var (
 		Duration: 10,
 	}
 	msg = Message{
-		Session:   &ses0,
+		SessId:    ses0.Id,
 		Id:        "2unique",
 		Timestamp: time.Now().Unix(),
+		Origin:    map[string]string{"1000": "192.168.2.1"},
 		Body:      "it's sweat, what you smell is sweat.",
 	}
 	tag = Tag{
@@ -327,8 +328,9 @@ type Session struct {
 }
 
 type Message struct {
-	Session   *Session `dynaGo:"SessionId,HASH"`
-	Timestamp int64    `dynaGo:",RANGE"`
-	Id        string   `dynaGo:"MessageId"`
+	SessId    string `dynaGo:"SessionId,HASH"`
+	Timestamp int64  `dynaGo:",RANGE"`
+	Id        string `dynaGo:"MessageId"`
+	Origin    map[string]string
 	Body      string
 }
