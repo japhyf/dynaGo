@@ -71,6 +71,11 @@ func structValueEncoder(e *valueEncoderState, n string, v reflect.Value) string 
 }
 func sliceValueEncoder(e *valueEncoderState, n string, v reflect.Value) string {
 	l, et := v.Len(), v.Type().Elem()
+	// if slice has no lenght, add no AttributeValue
+	// dynamoDb sets cannot be specified as empty
+	if l == 0 {
+		return "[]"
+	}
 	arrPtr := make([]*string, l)
 	arrEle := make([]string, l)
 	enc := valueEncoder(et)

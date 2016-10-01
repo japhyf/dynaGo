@@ -316,6 +316,7 @@ type Usr struct {
 	Pswd   []byte
 	Email  string
 	Alias  string
+	Peers  []string
 }
 
 type Session struct {
