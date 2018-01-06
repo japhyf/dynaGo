@@ -17,11 +17,10 @@ import (
 
 // Don't think this test will ever fail unless someone panics.
 func TestDecode(t *testing.T) {
-	cred := &credentials.SharedCredentialsProvider{Profile: "admin_marcus"}
 	svc := dynamodb.New(
 		session.New(),
 		&aws.Config{
-			Credentials: credentials.NewCredentials(cred),
+			Credentials: credentials.NewEnvCredentials(),
 			Endpoint:    aws.String("http://localhost:8000"),
 			Region:      aws.String("us-east-1"),
 		})

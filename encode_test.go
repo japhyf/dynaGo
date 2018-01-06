@@ -117,31 +117,33 @@ var TablesSchema = map[string]*dynamodb.CreateTableInput{
 	},
 }
 */
-var cred = &credentials.SharedCredentialsProvider{Profile: "admin_marcus"}
 var svc = dynamodb.New(
 	session.New(),
 	&aws.Config{
-		Credentials: credentials.NewCredentials(cred),
+		Credentials: credentials.NewEnvCredentials(),
 		Endpoint:    aws.String("http://localhost:8000"),
 		Region:      aws.String("us-east-1"),
 	})
 
+func warnOnTableFail(t *testing.T, err error) {
+	tee, ok := err.(TableExistsError)
+	if !ok {
+		t.Error(err)
+	}
+	t.Logf("WARN: Could not test table encoding for %s:: %s", tee.TableName, tee)
+}
 func TestEncodeTables(t *testing.T) {
-	t.Log(`create table 'Tags'`)
 	if err := CreateTable(svc, Tag{}, 1, 1); err != nil {
-		t.Error(err)
+		warnOnTableFail(t, err)
 	}
-	t.Log(`create table 'Usrs'`)
 	if err := CreateTable(svc, Usr{}, 1, 1); err != nil {
-		t.Error(err)
+		warnOnTableFail(t, err)
 	}
-	t.Log(`create table 'Sessions'`)
 	if err := CreateTable(svc, Session{}, 1, 1); err != nil {
-		t.Error(err)
+		warnOnTableFail(t, err)
 	}
-	t.Log(`create table 'Messages'`)
 	if err := CreateTable(svc, Message{}, 1, 1); err != nil {
-		t.Error(err)
+		warnOnTableFail(t, err)
 	}
 }
 
@@ -270,7 +272,7 @@ func TestGetValues(t *testing.T) {
 	t.Log("Get usr1...")
 	tryGetValue(t, Usr{}, usr1, "2000")
 	t.Log("Get ses..")
-	tryGetValue(t, Session{}, ses0, "abc")
+	tryGetValue(t, Session{}, ses0, "1000", "abc")
 }
 
 func tryGetValue(t *testing.T, i interface{}, v interface{}, k ...interface{}) {

@@ -25,17 +25,17 @@ import (
 // indicate the presence of options:
 //   `dynaGo:",HASH"`
 //   `dynaGo:"[alt-name],HASH"
-// for more examples see pkg/encoding/json.
+// for more examples see https://golang.org/pkg/encoding/json/
 //
 // Table names will simply be composed of the struct name plus
 // the letter s.  For instance if there is a
 //   type Packet struct {...}
 // the associatedd dynamoDB table will be named "Packets" (for now?)
 //
-// Immsdiately this method only recognizes struct types that are
+// Immediately this method only recognizes struct types that are
 // composed of exculsively int, string, and structs or slices and
 // pointers to any of those types. Any further unexpected type
-// will trigger a panic. Additional types shoould be trivial to add
+// will trigger a panic. Additional types should be trivial to add
 // following the given pattern.
 func Marshal(i interface{}) *dynamodb.PutItemInput {
 	e := &valueEncoderState{make(map[string]*dynamodb.AttributeValue)}
@@ -53,8 +53,10 @@ func TableName(t reflect.Type) string {
 
 // Try to create a table if it doesn't already exist
 // If it does exist or cannot be created, return error
-//   - Tables are created from structs only, and will panic on any other type
-//   - Table name will be [structName] + s (ie type Doc struct {...} => table "Docs")
+//
+// Tables are created from structs only, and will panic on any other type
+//
+// Table name will be [structName] + s (ie type Doc struct {...} => table "Docs")
 func CreateTable(svc *dynamodb.DynamoDB, v interface{}, w int64, r int64) error {
 	tn := TableName(reflect.TypeOf(v))
 	if err := tableExists(svc, tn); err != nil {

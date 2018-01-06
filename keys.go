@@ -112,6 +112,7 @@ func GetItemInput(km KeyMaker, kv ...interface{}) (*dynamodb.GetItemInput, error
 	}, nil
 }
 
+//AppendToBatchGet
 func AppendToBatchGet(b *dynamodb.BatchGetItemInput, km KeyMaker, kv ...interface{}) error {
 	k, err := km(kv...)
 	if err != nil {
