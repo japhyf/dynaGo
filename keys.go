@@ -14,24 +14,109 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
-// This part of the package is somewhat ad-hoc and disorganized.
-// It needs further refinment that I'm not willing to invest in at
-// the moment.
+type keyType int
 
+//types of keys in dynamodb
+const (
+	primary keyType = iota
+	secGbl  keyType = iota
+	secLoc  keyType = iota
+)
+
+//key is the type used to query a dynamodb.table
 type key struct {
+	t    keyType
 	pkn  string
 	rkn  string
 	tbln string
 	attr map[string]*dynamodb.AttributeValue
 }
 
+//KeyMaker is an interface specifying a function that takes as a
+//set of arguments any values that are intended to be the values
+//of the attributes of the the key specified by this keyMaker,
+//and returns a fully populated key with which queries can be made
+//against the table specified during its creation - see CreateKeyMaker
 type KeyMaker func(...interface{}) (key, error)
 
-// To put items to dynamoDB is one thing (Marshal), but to get items from
-// dynamoDB often requires a GetItemInput (if the item is fetched by primary key directly)
-// this method will convert a struct i with a key value ...k [partition key, rangekey]
-// to a GetItemInput as long as the struct is properly tagged, and the
-// partition key and range key are of the type descibed by the struct
+//createSecondaryIndex takes a type that describes an existing dynamodb table
+//and uses a key to generate a secondary index in dynamodb in the table.
+//
+// the format for the returned index name will be as follows:
+// if there is only a partition key:
+//   the name of the index will be [partitionKey]Index
+//   for example if the partition key of the index is email in the Usrs table
+//   the returned name will be 'emailIndex'
+// if there is a partition and a range key:
+//   [partitionKey]By[rangeKey]Index
+//   for example given the partition key 'routeId' and the range 'Timestamp' in
+//   the Messages table, the returned indexname will be 'routeIdByTimestampIndex'
+// the key needs to specify the partition key name, the range key name, and can
+// use the attr map to specify non-Key-attributes that should be returned by this
+// index
+//TODO_JAPHY
+func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
+
+	//YOUR CODE GOES HERE
+
+	// Make sure the table exists
+
+	// Make sure the index doesn't already exist
+
+	// insert new index that can be queried by key
+
+}
+
+// deleteSecondaryIndex allows the removal of keys created with createSecondaryIndex
+// should only throw an error if the index still exists after we attempted to delete it
+// otherwise - don't care
+func deleteSecondaryIndex(rt reflect.Type, in string) error {
+
+	// SOME CODE GOES HERE
+
+}
+
+//tableHasIndex takes a type and an index name and if an index with
+//the given name exsists, it will return a key representing the spec
+//of the given key.
+//
+//TODO_JAPHY - this can be used for testing and as a utility for
+//createSecondaryIndex
+func tableHasIndex(rt reflect.Typ, in string) (key, bool) {
+
+	//YOUR CODE GOES HERE
+
+}
+
+//CreateKeyMaker accepts a type, and an index name.
+//The index name should specify the name of an index available within
+//the provided type.  This method will return a keyMaker capable
+//of generating queries on a table (specified by the type), using
+//the index referenced by name.
+//
+//TODO_JAPHY -  Initially let's focues on the simplest case, just a plain
+// dynamodb.GetItem query.  While you're working on this think about
+// how this may be useful for dynamodb.Scan as well. ( how to specify
+// range key more loosely?  How does that work with keymaker / the interfaces
+// that consume keymaker? eg. dynago.Get vs dynago.GetAll)
+//
+// When this is done CreateKeyMaker(rt) simply becomes a special case of this
+// method - so most of the code for this will come from there, but be more
+// generalized. This method returns no errors - we expect the errors to come
+// from the query execution. You'll have to look up the field name for the
+// associated attribute values.
+func CreateKeyMaker(rt reflect.Type, in string) KeyMaker {
+
+	//YOUR CODE GOES HERE.
+
+}
+
+//CreateKeyMaker To put items to dynamoDB is one thing (Marshal), but to
+// get items from dynamoDB often requires a GetItemInput (if the item is
+// fetched by primary key directly) this method will convert a struct i
+// with a key value ...k [partition key, rangekey] to a GetItemInput as
+// long as the struct is properly tagged, and the partition key and range
+// key are of the type descibed by the struct
 //
 // This method may have some logical overlap with encode()
 // should look into that someday.  May just be able to grab the KeySchema?
@@ -46,6 +131,7 @@ func CreateKeyMaker(rt reflect.Type) KeyMaker {
 	}
 
 	priK := key{
+		k:    primary,
 		tbln: TableName(t),
 	}
 	//partition key, panics if not found
