@@ -58,15 +58,11 @@ type KeyMaker func(...interface{}) (key, error)
 func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     //allowing for 1 level of indirection
     //not sure if I can use functions from other files, if so just:
-    //tn:=TableName(rt)
-    if rt.Kind() == reflect.Ptr {
-        rt = rt.Elem()
-    }
-    tn := rt.Name() + "s"
-    if k.rkn = "" {
+    tn:=TableName(rt)
+    if k.rkn == "" {
         in := pkn + "Index"
         update :=  UpdateTableInput{
-            attribute_definitions: [k.attr],
+            attribute_definitions: k.attr,
             table_name: tn,
             provisioned_throughput: {
                 read_capacity_units: 1, //# required
@@ -84,8 +80,8 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                         ],
                         //not quite sure what this part means
                         projection: {
-                            projection_type: "ALL"
-                            non_key_attributes: ["NonKeyAttributeName"]
+                            projection_type: "ALL",
+                            non_key_attributes: ["NonKeyAttributeName"],
                         },
                     },
                 },
@@ -95,7 +91,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     else {
         in := pkn + "By" + rkn + "Index"
         update :=  UpdateTableInput{
-            attribute_definitions: [k.attr],
+            attribute_definitions: k.attr,
             table_name: tn,
             provisioned_throughput: {
                 read_capacity_units: 1, //# required
@@ -117,8 +113,8 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                         ],
                         //not quite sure what this part means
                         projection: {
-                            projection_type: "ALL"
-                            non_key_attributes: ["NonKeyAttributeName"]
+                            projection_type: "ALL",
+                            non_key_attributes: ["NonKeyAttributeName"],
                         },
                     },
                 },
