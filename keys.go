@@ -69,8 +69,8 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
             attribute_definitions: [k.attr],
             table_name: tn,
             provisioned_throughput: {
-                read_capacity_units: 1, # required
-                write_capacity_units: 1, # required
+                read_capacity_units: 1, //# required
+                write_capacity_units: 1, //# required
             },
             global_secondary_index_updates: [
                 {
@@ -98,8 +98,8 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
             attribute_definitions: [k.attr],
             table_name: tn,
             provisioned_throughput: {
-                read_capacity_units: 1, # required
-                write_capacity_units: 1, # required
+                read_capacity_units: 1, //# required
+                write_capacity_units: 1, //# required
             },
             global_secondary_index_updates: [
                 {
