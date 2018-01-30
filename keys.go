@@ -134,7 +134,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 	// Make sure the index doesn't already exist
 
 	// insert new index that can be queried by key
-
+	return "", nil
 }
 
 // deleteSecondaryIndex allows the removal of keys created with createSecondaryIndex
@@ -143,7 +143,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 func deleteSecondaryIndex(rt reflect.Type, in string) error {
 
 	// SOME CODE GOES HERE
-
+	return nil
 }
 
 //tableHasIndex takes a type and an index name and if an index with
@@ -152,10 +152,10 @@ func deleteSecondaryIndex(rt reflect.Type, in string) error {
 //
 //TODO_JAPHY - this can be used for testing and as a utility for
 //createSecondaryIndex
-func tableHasIndex(rt reflect.Typ, in string) (key, bool) {
+func tableHasIndex(rt reflect.Type, in string) (key, bool) {
 
 	//YOUR CODE GOES HERE
-
+	return key{}, false
 }
 
 //CreateKeyMaker accepts a type, and an index name.
@@ -175,10 +175,12 @@ func tableHasIndex(rt reflect.Typ, in string) (key, bool) {
 // generalized. This method returns no errors - we expect the errors to come
 // from the query execution. You'll have to look up the field name for the
 // associated attribute values.
-func CreateKeyMaker(rt reflect.Type, in string) KeyMaker {
+func CreateKeyMakerByName(rt reflect.Type, in string) KeyMaker {
 
 	//YOUR CODE GOES HERE.
-
+	return func(...interface{}) (key, error) {
+		return key{}, nil
+	}
 }
 
 //CreateKeyMaker To put items to dynamoDB is one thing (Marshal), but to
@@ -201,7 +203,7 @@ func CreateKeyMaker(rt reflect.Type) KeyMaker {
 	}
 
 	priK := key{
-		k:    primary,
+		t:    primary,
 		tbln: TableName(t),
 	}
 	//partition key, panics if not found
