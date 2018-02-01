@@ -60,7 +60,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     //not sure if I can use functions from other files, if so just:
     tn:=TableName(rt)
     if k.rkn == "" {
-        in := pkn + "Index"
+        in := k.pkn + "Index"
         update :=  &dynamodb.UpdateTableInput{
             AttributeDefinitions: k.attr,
             TableName: tn,
@@ -68,28 +68,26 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                 ReadCapacityUnits: aws.Int64(10), //# required
                 WriteCapacityUnits: aws.Int64(10), //# required
             },
-            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdates[
-                {
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
                     Create: &CreateGlobalSecondaryIndexAction{
                         IndexName: in,
-                        KeySchema: []*KeySchemaElement[ //left off here
+                        KeySchema: {}*KeySchemaElement{ //left off here
                             &KeySchemaElement{
                                 AttributeName: k.pkn,
                                 KeyType: "HASH",
                             },
-                        ],
+                        },
                         //not quite sure what this part means
                         Projection: *Projection {
-                            ProjectionType: "ALL",
-                            NonKeyAttributes: ["NonKeyAttributeName"],
+                            ProjectionType: "INCLUDE",
+                            NonKeyAttributes: getKeys(k.attr),
                         },
                     },
                 },
-            ],
         }
     }
     else {
-        in := pkn + "By" + rkn + "Index"
+        in := k.pkn + "By" + k.rkn + "Index"
         update :=  &dynamodb.UpdateTableInput{
             AttributeDefinitions: k.attr,
             TableName: tn,
@@ -97,11 +95,10 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                 ReadCapacityUnits: aws.Int64(10), //# required
                 WriteCapacityUnits: aws.Int64(10), //# required
             },
-            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdates[
-                {
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
                     Create: &CreateGlobalSecondaryIndexAction{
                         IndexName: in,
-                        KeySchema: []*KeySchemaElement[ //left off here
+                        KeySchema: {}*KeySchemaElement{ //left off here
                             &KeySchemaElement{
                                 AttributeName: k.pkn,
                                 KeyType: "HASH",
@@ -110,17 +107,14 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                                 AttributeName: k.rkn,
                                 KeyType: "RANGE",
 			    },
-                        ],
+                        },
                         //not quite sure what this part means
                         Projection: *Projection {
-                            ProjectionType: "ALL",
-                            NonKeyAttributes: ["NonKeyAttributeName"],
+                            ProjectionType: "INCLUDE",
+                            NonKeyAttributes: getKeys(k.attr),
                         },
                     },
                 },
-            ],
-
-         
 	}
     }
     dynamodb.UpdateTable(&update);
@@ -134,6 +128,14 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 	// insert new index that can be queried by key
 	return "", nil
 }
+func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
+    out := make([]*string, 0, len(attr));
+    for _, i := range attr {
+        out = append(out, aws.String(i));
+    }
+    return out;
+}
+
 
 // deleteSecondaryIndex allows the removal of keys created with createSecondaryIndex
 // should only throw an error if the index still exists after we attempted to delete it
