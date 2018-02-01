@@ -61,27 +61,27 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     tn:=TableName(rt)
     if k.rkn == "" {
         in := pkn + "Index"
-        update :=  UpdateTableInput{
-            attribute_definitions: k.attr,
-            table_name: tn,
-            provisioned_throughput: {
-                read_capacity_units: 1, //# required
-                write_capacity_units: 1, //# required
+        update :=  &dynamodb.UpdateTableInput{
+            AttributeDefinitions: k.attr,
+            TableName: tn,
+            ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+                ReadCapacityUnits: aws.Int64(10), //# required
+                WriteCapacityUnits: aws.Int64(10), //# required
             },
-            global_secondary_index_updates: [
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdates[
                 {
-                    create: {
-                        index_name: in,
-                        key_schema: [
-                            {
-                                attribute_name: k.pkn,
-                                key_type: "HASH",
+                    Create: &CreateGlobalSecondaryIndexAction{
+                        IndexName: in,
+                        KeySchema: []*KeySchemaElement[ //left off here
+                            &KeySchemaElement{
+                                AttributeName: k.pkn,
+                                KeyType: "HASH",
                             },
                         ],
                         //not quite sure what this part means
-                        projection: {
-                            projection_type: "ALL",
-                            non_key_attributes: ["NonKeyAttributeName"],
+                        Projection: *Projection {
+                            ProjectionType: "ALL",
+                            NonKeyAttributes: ["NonKeyAttributeName"],
                         },
                     },
                 },
@@ -90,38 +90,40 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     }
     else {
         in := pkn + "By" + rkn + "Index"
-        update :=  UpdateTableInput{
-            attribute_definitions: k.attr,
-            table_name: tn,
-            provisioned_throughput: {
-                read_capacity_units: 1, //# required
-                write_capacity_units: 1, //# required
+        update :=  &dynamodb.UpdateTableInput{
+            AttributeDefinitions: k.attr,
+            TableName: tn,
+            ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+                ReadCapacityUnits: aws.Int64(10), //# required
+                WriteCapacityUnits: aws.Int64(10), //# required
             },
-            global_secondary_index_updates: [
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdates[
                 {
-                    create: {
-                        index_name: in,
-                        key_schema: [
-                            {
-                                attribute_name: k.pkn,
-                                key_type: "HASH",
+                    Create: &CreateGlobalSecondaryIndexAction{
+                        IndexName: in,
+                        KeySchema: []*KeySchemaElement[ //left off here
+                            &KeySchemaElement{
+                                AttributeName: k.pkn,
+                                KeyType: "HASH",
                             },
-                            {
-                                attribute_name: k.rkn,
-                                key_type: "RANGE",
-                            },
+			    &KeySchemaElement{
+                                AttributeName: k.rkn,
+                                KeyType: "RANGE",
+			    },
                         ],
                         //not quite sure what this part means
-                        projection: {
-                            projection_type: "ALL",
-                            non_key_attributes: ["NonKeyAttributeName"],
+                        Projection: *Projection {
+                            ProjectionType: "ALL",
+                            NonKeyAttributes: ["NonKeyAttributeName"],
                         },
                     },
                 },
             ],
-        }
+
+         
+	}
     }
-    UpdateTable(&update);
+    dynamodb.UpdateTable(&update);
 
 	//YOUR CODE GOES HERE
 
