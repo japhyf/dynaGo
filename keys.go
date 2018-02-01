@@ -71,22 +71,21 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
             GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
                     Create: &CreateGlobalSecondaryIndexAction{
                         IndexName: in,
-                        KeySchema: {}*KeySchemaElement{ //left off here
+                        KeySchema: []*KeySchemaElement{ //left off here
                             &KeySchemaElement{
                                 AttributeName: k.pkn,
                                 KeyType: "HASH",
                             },
                         },
                         //not quite sure what this part means
-                        Projection: *Projection {
+                        Projection: &Projection {
                             ProjectionType: "INCLUDE",
                             NonKeyAttributes: getKeys(k.attr),
                         },
                     },
                 },
         }
-    }
-    else {
+    }else {
         in := k.pkn + "By" + k.rkn + "Index"
         update :=  &dynamodb.UpdateTableInput{
             AttributeDefinitions: k.attr,
@@ -98,7 +97,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
             GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
                     Create: &CreateGlobalSecondaryIndexAction{
                         IndexName: in,
-                        KeySchema: {}*KeySchemaElement{ //left off here
+                        KeySchema: []*KeySchemaElement{ //left off here
                             &KeySchemaElement{
                                 AttributeName: k.pkn,
                                 KeyType: "HASH",
@@ -109,7 +108,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 			    },
                         },
                         //not quite sure what this part means
-                        Projection: *Projection {
+                        Projection: &Projection {
                             ProjectionType: "INCLUDE",
                             NonKeyAttributes: getKeys(k.attr),
                         },
