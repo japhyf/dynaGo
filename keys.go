@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
@@ -56,13 +56,11 @@ type KeyMaker func(...interface{}) (key, error)
 // index
 //TODO_JAPHY
 func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
-    //allowing for 1 level of indirection
-    //not sure if I can use functions from other files, if so just:
     tn:=TableName(rt)
     if k.rkn == "" {
         in := k.pkn + "Index"
         update :=  &dynamodb.UpdateTableInput{
-            AttributeDefinitions: k.attr,
+            AttributeDefinitions: getKeyAttr(rt, k.pkn),
             TableName: tn,
             ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
                 ReadCapacityUnits: aws.Int64(10), //# required
@@ -71,13 +69,12 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
             GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
                     Create: &CreateGlobalSecondaryIndexAction{
                         IndexName: in,
-                        KeySchema: []*KeySchemaElement{ //left off here
+                        KeySchema: []*KeySchemaElement{
                             &KeySchemaElement{
                                 AttributeName: k.pkn,
                                 KeyType: "HASH",
                             },
                         },
-                        //not quite sure what this part means
                         Projection: &Projection {
                             ProjectionType: "INCLUDE",
                             NonKeyAttributes: getKeys(k.attr),
@@ -88,7 +85,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
     }else {
         in := k.pkn + "By" + k.rkn + "Index"
         update :=  &dynamodb.UpdateTableInput{
-            AttributeDefinitions: k.attr,
+            AttributeDefinitions: getKeyAttr(rt, k.pkn),
             TableName: tn,
             ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
                 ReadCapacityUnits: aws.Int64(10), //# required
@@ -107,7 +104,6 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
                                 KeyType: "RANGE",
 			    },
                         },
-                        //not quite sure what this part means
                         Projection: &Projection {
                             ProjectionType: "INCLUDE",
                             NonKeyAttributes: getKeys(k.attr),
@@ -127,12 +123,39 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 	// insert new index that can be queried by key
 	return "", nil
 }
+
 func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
     out := make([]*string, 0, len(attr));
     for _, i := range attr {
         out = append(out, aws.String(i));
     }
     return out;
+}
+func getKeyAttr(refect.Type rt, string name) []*dynamodb.AttributeDefinition {
+    attrDef,found := rt.FieldByName(name)
+    if(!found) {
+        return null;
+    }
+    else {
+        switch k := attrDef.Kind() {
+	case S:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("S"),
+	    }
+	case N:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("N"),
+	    }
+	case B:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("B"),
+	    }
+	case default:
+	    return null;
+	}
 }
 
 
