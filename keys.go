@@ -131,13 +131,12 @@ func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
     }
     return out;
 }
-func getKeyAttr(refect.Type rt, string name) []*dynamodb.AttributeDefinition {
+func getKeyAttr(rt refect.Type, name string) []*dynamodb.AttributeDefinition {
     attrDef,found := rt.FieldByName(name)
     if(!found) {
-        return null;
-    }
-    else {
-        switch k := attrDef.Kind() {
+        return null
+    } else {
+        switch attrDef.Kind() {
 	case S:
 	    return *dynamodb.AttributeDefinition {
 		AttributeName: aws.String(name),
@@ -153,8 +152,8 @@ func getKeyAttr(refect.Type rt, string name) []*dynamodb.AttributeDefinition {
 		AttributeName: aws.String(name),
 		AttributeType: aws.String("B"),
 	    }
-	case default:
-	    return null;
+	default:
+	    return null
 	}
 }
 
