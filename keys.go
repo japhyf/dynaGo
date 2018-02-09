@@ -137,17 +137,17 @@ func getKeyAttr(rt refect.Type, name string) []*dynamodb.AttributeDefinition {
         return null
     } else {
         switch attrDef.Kind() {
-	case S:
+	case reflect.String:
 	    return *dynamodb.AttributeDefinition {
 		AttributeName: aws.String(name),
 		AttributeType: aws.String("S"),
 	    }
-	case N:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 	    return *dynamodb.AttributeDefinition {
 		AttributeName: aws.String(name),
 		AttributeType: aws.String("N"),
 	    }
-	case B:
+	case reflect.Slice:
 	    return *dynamodb.AttributeDefinition {
 		AttributeName: aws.String(name),
 		AttributeType: aws.String("B"),
