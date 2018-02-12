@@ -22,8 +22,8 @@ var provider = credentials.StaticProvider{
 
 var (
 	tn = TableName(KeysTestUsrType)
-	in = "emailIndex"
-	fn = "email"
+	in = "EmailIndex"
+	fn = "Email"
 	db = dynamodb.New(
 		session.New(
 			&aws.Config{
@@ -43,13 +43,15 @@ func TestSecondaryIndexCreate(t *testing.T) {
 		deleteSecondaryIndex(KeysTestUsrType, in)
 		t.Errorf("Secondary Index %s exists when it should not!", in)
 	}
-	n, err := createSecondaryIndex(KeysTestUsrType, key{t: secGbl, pkn: fn})
+	uti, err := createSecondaryIndex(KeysTestUsrType, key{t: secGbl, pkn: fn})
 	if err != nil {
-		t.Errorf("could not create secondaryIndex %s:: %s", in, err)
+		t.Errorf("could not create secondaryIndex %s:: %s", fn, err)
 		t.FailNow()
 	}
-	if n != in {
-		t.Errorf("expected index name ('%s') not equal to returned name '%s'", in, n)
+
+	_, err = db.UpdateTable(&uti)
+	if err != nil {
+		t.Errorf("could not update table with secondary index %s:: %s", in, err)
 		t.FailNow()
 	}
 	desc := testTableHasIndex(tn, in, t)
