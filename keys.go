@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
@@ -56,6 +56,63 @@ type KeyMaker func(...interface{}) (key, error)
 // index
 //TODO_JAPHY
 func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
+    tn:=TableName(rt)
+    if k.rkn == "" {
+        in := k.pkn + "Index"
+        update :=  &dynamodb.UpdateTableInput{
+            AttributeDefinitions: getKeyAttr(rt, k.pkn),
+            TableName: tn,
+            ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+                ReadCapacityUnits: aws.Int64(10), //# required
+                WriteCapacityUnits: aws.Int64(10), //# required
+            },
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
+                    Create: &CreateGlobalSecondaryIndexAction{
+                        IndexName: in,
+                        KeySchema: []*KeySchemaElement{
+                            &KeySchemaElement{
+                                AttributeName: k.pkn,
+                                KeyType: "HASH",
+                            },
+                        },
+                        Projection: &Projection {
+                            ProjectionType: "INCLUDE",
+                            NonKeyAttributes: getKeys(k.attr),
+                        },
+                    },
+                },
+        }
+    }else {
+        in := k.pkn + "By" + k.rkn + "Index"
+        update :=  &dynamodb.UpdateTableInput{
+            AttributeDefinitions: getKeyAttr(rt, k.pkn),
+            TableName: tn,
+            ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+                ReadCapacityUnits: aws.Int64(10), //# required
+                WriteCapacityUnits: aws.Int64(10), //# required
+            },
+            GlobalSecondaryIndexUpdates: &dynamodb.GlobalSecondaryIndexUpdate{
+                    Create: &CreateGlobalSecondaryIndexAction{
+                        IndexName: in,
+                        KeySchema: []*KeySchemaElement{ //left off here
+                            &KeySchemaElement{
+                                AttributeName: k.pkn,
+                                KeyType: "HASH",
+                            },
+			    &KeySchemaElement{
+                                AttributeName: k.rkn,
+                                KeyType: "RANGE",
+			    },
+                        },
+                        Projection: &Projection {
+                            ProjectionType: "INCLUDE",
+                            NonKeyAttributes: getKeys(k.attr),
+                        },
+                    },
+                },
+	}
+    }
+    dynamodb.UpdateTable(&update);
 
 	//YOUR CODE GOES HERE
 
@@ -66,6 +123,40 @@ func createSecondaryIndex(rt reflect.Type, k key) (string, error) {
 	// insert new index that can be queried by key
 	return "", nil
 }
+
+func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
+    out := make([]*string, 0, len(attr));
+    for _, i := range attr {
+        out = append(out, aws.String(i));
+    }
+    return out;
+}
+func getKeyAttr(rt refect.Type, name string) []*dynamodb.AttributeDefinition {
+    attrDef,found := rt.FieldByName(name)
+    if(!found) {
+        return null
+    } else {
+        switch attrDef.Kind() {
+	case reflect.String:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("S"),
+	    }
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("N"),
+	    }
+	case reflect.Slice:
+	    return *dynamodb.AttributeDefinition {
+		AttributeName: aws.String(name),
+		AttributeType: aws.String("B"),
+	    }
+	default:
+	    return null
+	}
+}
+
 
 // deleteSecondaryIndex allows the removal of keys created with createSecondaryIndex
 // should only throw an error if the index still exists after we attempted to delete it
