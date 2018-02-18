@@ -67,24 +67,29 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 		return dynamodb.UpdateTableInput{
 			AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr},
 			TableName:            aws.String(tn),
-			ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-				ReadCapacityUnits:  aws.Int64(10), //# required
-				WriteCapacityUnits: aws.Int64(10), //# required
-			},
+			/*ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+				ReadCapacityUnits:  aws.Int64(1), //# required
+				WriteCapacityUnits: aws.Int64(1), //# required
+			},*/
 			GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
 				&dynamodb.GlobalSecondaryIndexUpdate{
 					Create: &dynamodb.CreateGlobalSecondaryIndexAction{
 						IndexName: aws.String(in),
+						ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+							ReadCapacityUnits:  aws.Int64(1), //# required
+							WriteCapacityUnits: aws.Int64(1), //# required
+						},
 						KeySchema: []*dynamodb.KeySchemaElement{
 							&dynamodb.KeySchemaElement{
 								AttributeName: aws.String(k.pkn),
 								KeyType:       aws.String("HASH"),
 							},
 						},
-						Projection: &dynamodb.Projection{
+						Projection: getKeys(k.attr),
+						/*Projection: &dynamodb.Projection{
 							ProjectionType:   aws.String("INCLUDE"),
 							NonKeyAttributes: getKeys(k.attr),
-						},
+						},*/
 					},
 				},
 			},
@@ -99,15 +104,19 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 	return dynamodb.UpdateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr, &rkAttr},
 		TableName:            aws.String(tn),
-		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(10), //# required
-			WriteCapacityUnits: aws.Int64(10), //# required
-		},
+		/*ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+			ReadCapacityUnits:  aws.Int64(1), //# required
+			WriteCapacityUnits: aws.Int64(1), //# required
+		},*/
 		GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
 			&dynamodb.GlobalSecondaryIndexUpdate{
 				Create: &dynamodb.CreateGlobalSecondaryIndexAction{
 					IndexName: aws.String(in),
-					KeySchema: []*dynamodb.KeySchemaElement{ //left off here
+					ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(1), //# required
+						WriteCapacityUnits: aws.Int64(1), //# required
+					},
+					KeySchema: []*dynamodb.KeySchemaElement{
 						&dynamodb.KeySchemaElement{
 							AttributeName: aws.String(k.pkn),
 							KeyType:       aws.String("HASH"),
@@ -117,22 +126,38 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 							KeyType:       aws.String("RANGE"),
 						},
 					},
-					Projection: &dynamodb.Projection{
+					Projection: getKeys(k.attr),
+					/*Projection: &dynamodb.Projection{
 						ProjectionType:   aws.String("INCLUDE"),
 						NonKeyAttributes: getKeys(k.attr),
-					},
+					},*/
 				},
 			},
 		},
 	}, nil
 }
 
-func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
+/*func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
 	out := make([]*string, 0, len(attr))
 	for k := range attr {
 		out = append(out, aws.String(k))
 	}
 	return out
+}*/
+func getKeys(attr map[string]*dynamodb.AttributeValue) *dynamodb.Projection {
+	out := make([]*string, 0, len(attr))
+	for k := range attr {
+		out = append(out, aws.String(k))
+	}
+	if(len(out) == 0){
+		return &dynamodb.Projection{
+			ProjectionType:   aws.String("KEYS_ONLY"),
+		}
+	}
+	return &dynamodb.Projection{
+		ProjectionType:   aws.String("INCLUDE"),
+		NonKeyAttributes: out,
+	}
 }
 
 type ErrorFieldNameNotFound struct {
