@@ -85,11 +85,7 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 								KeyType:       aws.String("HASH"),
 							},
 						},
-						Projection: getKeys(k.attr),
-						/*Projection: &dynamodb.Projection{
-							ProjectionType:   aws.String("INCLUDE"),
-							NonKeyAttributes: getKeys(k.attr),
-						},*/
+						Projection: getProjection(k.attr),
 					},
 				},
 			},
@@ -126,25 +122,15 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 							KeyType:       aws.String("RANGE"),
 						},
 					},
-					Projection: getKeys(k.attr),
-					/*Projection: &dynamodb.Projection{
-						ProjectionType:   aws.String("INCLUDE"),
-						NonKeyAttributes: getKeys(k.attr),
-					},*/
+					Projection: getProjection(k.attr),
 				},
 			},
 		},
 	}, nil
 }
 
-/*func getKeys(attr map[string]*dynamodb.AttributeValue) []*string {
-	out := make([]*string, 0, len(attr))
-	for k := range attr {
-		out = append(out, aws.String(k))
-	}
-	return out
-}*/
-func getKeys(attr map[string]*dynamodb.AttributeValue) *dynamodb.Projection {
+
+func getProjection(attr map[string]*dynamodb.AttributeValue) *dynamodb.Projection {
 	out := make([]*string, 0, len(attr))
 	for k := range attr {
 		out = append(out, aws.String(k))
