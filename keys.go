@@ -67,10 +67,6 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 		return dynamodb.UpdateTableInput{
 			AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr},
 			TableName:            aws.String(tn),
-			/*ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-				ReadCapacityUnits:  aws.Int64(1), //# required
-				WriteCapacityUnits: aws.Int64(1), //# required
-			},*/
 			GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
 				&dynamodb.GlobalSecondaryIndexUpdate{
 					Create: &dynamodb.CreateGlobalSecondaryIndexAction{
@@ -100,10 +96,6 @@ func createSecondaryIndex(rt reflect.Type, k key) (dynamodb.UpdateTableInput, er
 	return dynamodb.UpdateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr, &rkAttr},
 		TableName:            aws.String(tn),
-		/*ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(1), //# required
-			WriteCapacityUnits: aws.Int64(1), //# required
-		},*/
 		GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
 			&dynamodb.GlobalSecondaryIndexUpdate{
 				Create: &dynamodb.CreateGlobalSecondaryIndexAction{
@@ -184,10 +176,19 @@ func getKeyAttr(rt reflect.Type, name string) (dynamodb.AttributeDefinition, err
 // deleteSecondaryIndex allows the removal of keys created with createSecondaryIndex
 // should only throw an error if the index still exists after we attempted to delete it
 // otherwise - don't care
-func deleteSecondaryIndex(rt reflect.Type, in string) error {
-
-	// SOME CODE GOES HERE
-	return nil
+func deleteSecondaryIndex(rt reflect.Type, in string) (dynamodb.UpdateTableInput, error) {
+	tn := TableName(rt)
+	return dynamodb.UpdateTableInput{
+		//AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr, &rkAttr},
+		TableName:            aws.String(tn),
+		GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
+			&dynamodb.GlobalSecondaryIndexUpdate{
+				Delete: &dynamodb.DeleteGlobalSecondaryIndexAction{
+					IndexName: aws.String(in),
+				},
+			},
+		},
+	}, nil
 }
 
 //tableHasIndex takes a type and an index name and if an index with
