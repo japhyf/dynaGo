@@ -72,7 +72,9 @@ func TestSecondaryIndexDelete(t *testing.T) {
 	if testTableHasIndex(tn, in, t) == nil {
 		t.Errorf("%s table does not have index '%s' to delate!", tn, in)
 	}
-	if err := deleteSecondaryIndex(KeysTestUsrType, in); err != nil {
+	uti, err := deleteSecondaryIndex(KeysTestUsrType, in)
+	_, err = db.UpdateTable(&uti)
+	if err != nil {
 		t.Errorf("Delete '%s' from '%s' failed:: %s", in, tn, err)
 	}
 	if testTableHasIndex(tn, in, t) != nil {
