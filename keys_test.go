@@ -70,7 +70,7 @@ func TestSecondaryIndexCreate(t *testing.T) {
 }
 func TestSecondaryIndexDelete(t *testing.T) {
 	if testTableHasIndex(tn, in, t) == nil {
-		t.Errorf("%s table does not have index '%s' to delate!", tn, in)
+		t.Errorf("%s table does not have index '%s' to delete!", tn, in)
 	}
 	uti, err := deleteSecondaryIndex(KeysTestUsrType, in)
 	_, err = db.UpdateTable(&uti)
@@ -84,7 +84,8 @@ func TestSecondaryIndexDelete(t *testing.T) {
 
 func TestSecondaryIndexCreateKeyMaker(t *testing.T) {
 	em := "bob@vila.hmi"
-	km := CreateKeyMakerByName(KeysTestUsrType, fn)
+	dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
+	km := CreateKeyMakerByName(KeysTestUsrType, fn, *dto)
 	key, err := km(em)
 	if err != nil {
 		t.Errorf("KeyMaker failed to construct key:: %s", err)
