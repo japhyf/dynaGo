@@ -85,6 +85,10 @@ func TestSecondaryIndexDelete(t *testing.T) {
 func TestSecondaryIndexCreateKeyMaker(t *testing.T) {
 	em := "bob@vila.hmi"
 	dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
+	if err != nil {
+		t.Errorf("Describe table query failed: %s", err)
+		t.FailNow()
+	}
 	km := CreateKeyMakerByName(KeysTestUsrType, fn, *dto)
 	key, err := km(em)
 	if err != nil {
@@ -102,7 +106,7 @@ func TestSecondaryIndexCreateKeyMaker(t *testing.T) {
 	if key.tbln != tn {
 		t.Errorf("KeyMaker produced key for table '%s', expected '%s'", key.tbln, tn)
 	}
-	if key.attr == nil || aws.StringValue(key.attr[fn].S) != em {
+	if key.attr == nil || key.attr[fn] == nil || aws.StringValue(key.attr[fn].S) != em {
 		t.Error("KeyMaker produced incorrect attribute value map.")
 	}
 }
