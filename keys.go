@@ -238,29 +238,23 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		t:    secGbl,
 		tbln: TableName(t),
 	}
-	//partition key, panics if not found
-	//pki := getPartitionKey(t)
-	//pF := func(kv interface{}) (string, dynamodb.AttributeValue, error) {
-	//	return getKeynameAndAttribute(t, pki, kv)
-	//}
-	//pF := func(kv interface{}) (string, dynamodb.AttributeValue, error) {
-	//	return getKeynameAndAttribute(t, pki, kv)
-	//}
-	for i:=0; i < dto.TableDescription.GlobalSecondaryIndexes.size(); i++ {
-		if dto.TableDescription.GlobalSecondaryIndexes[i].IndexName == in {
-			for j:=0; j < dto.TableDescription.GlobalSecondaryIndexes.size(); j++ {
-				if dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j].KeyType == "HASH"{
-					pkn := dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j]
+	pkn := ""
+	rkn := ""
+	for _, i := range dto.Table.GlobalSecondaryIndexes{
+		if *i.IndexName == in {
+			for j:=0; j < 2; j++ {
+				if *i.KeySchema[j].KeyType == "HASH"{
+					pkn = *i.KeySchema[j].AttributeName
 				}
-				if dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j].KeyType == "RANGE"{
-					rkn := dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j]
+				if *i.KeySchema[j].KeyType == "RANGE"{
+					rkn = *i.KeySchema[j].AttributeName
 				}
 				break;
 			}
 		}
 
 	}
-	if !rkn {
+	if rkn == "" {
 		return func(ks ...interface{}) (key, error) {
 			if len(ks) < 1 {
 				es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
@@ -272,7 +266,12 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			//}
 			priK.pkn = pkn
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
-			priK.attr[pkn] = &dto.TableDescription.AttributeDefinition.pkn
+			for _, def := range dto.Table.AttributeDefinitions {
+				if *def.AttributeName == pkn {
+					priK.attr[pkn] = def
+				}
+			}
+			
 
 			return priK, nil
 		}
@@ -289,14 +288,22 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		//}
 		priK.pkn = pkn
 		priK.attr = make(map[string]*dynamodb.AttributeValue)
-		priK.attr[pkn] = &dto.TableDescription.AttributeDefinition.pkn
+		for _, def := range dto.Table.AttributeDefinitions {
+			if *def.AttributeName == pkn {
+				priK.attr[pkn] = def
+			}
+		}
 
 		//rk, rv, err := rF(ks[1])
 		//if err != nil {
 		//	return key{}, err
 		//}
 		priK.rkn = rkn
-		priK.attr[rkn] = &dto.TableDescription.AttributeDefinition.rkn
+		for _, def := range dto.Table.AttributeDefinitions {
+			if *def.AttributeName == rkn {
+				priK.attr[rkn] = def
+			}
+		}
 		return priK, nil
 	}
 }
