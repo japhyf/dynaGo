@@ -198,7 +198,10 @@ func deleteSecondaryIndex(rt reflect.Type, in string) (dynamodb.UpdateTableInput
 //TODO_JAPHY - this can be used for testing and as a utility for
 //createSecondaryIndex
 func tableHasIndex(rt reflect.Type, in string) (key, bool) {
-
+	tn := TableName(rt)
+	dynamodb.DescribeTableInput{
+		TableName: aws.String(tn),
+	}
 	//YOUR CODE GOES HERE
 	return key{}, false
 }
@@ -208,6 +211,7 @@ func tableHasIndex(rt reflect.Type, in string) (key, bool) {
 //the provided type.  This method will return a keyMaker capable
 //of generating queries on a table (specified by the type), using
 //the index referenced by name.
+
 //
 //TODO_JAPHY -  Initially let's focues on the simplest case, just a plain
 // dynamodb.GetItem query.  While you're working on this think about
@@ -220,11 +224,80 @@ func tableHasIndex(rt reflect.Type, in string) (key, bool) {
 // generalized. This method returns no errors - we expect the errors to come
 // from the query execution. You'll have to look up the field name for the
 // associated attribute values.
-func CreateKeyMakerByName(rt reflect.Type, in string) KeyMaker {
+func CreateKeyMakerByName(rt reflect.Type, in string, dto describeTableOutput) KeyMaker {
+	//allow pointers to struct
+	var t reflect.Type
+	switch rt.Kind() {
+	case reflect.Ptr:
+		t = rt.Elem()
+	default:
+		t = rt
+	}
 
-	//YOUR CODE GOES HERE.
-	return func(...interface{}) (key, error) {
-		return key{}, nil
+	priK := key{
+		t:    secGbl,
+		tbln: TableName(t),
+	}
+	//partition key, panics if not found
+	//pki := getPartitionKey(t)
+	//pF := func(kv interface{}) (string, dynamodb.AttributeValue, error) {
+	//	return getKeynameAndAttribute(t, pki, kv)
+	//}
+	//pF := func(kv interface{}) (string, dynamodb.AttributeValue, error) {
+	//	return getKeynameAndAttribute(t, pki, kv)
+	//}
+	for i:=0, i < dto.TableDescription.GlobalSecondaryIndexes.size(), ++i {
+		if dto.TableDescription.GlobalSecondaryIndexes[i].IndexName == in {
+			for j:=0, j < dto.TableDescription.GlobalSecondaryIndexes.size(), ++j {
+				if dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j].KeyType == "HASH"{
+					pkn := dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j]
+				}
+				if dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j].KeyType == "RANGE"{
+					rkn := dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j]
+				}
+				break;
+			}
+		}
+
+	}
+	if !rkn {
+		return func(ks ...interface{}) (key, error) {
+			if len(ks) < 1 {
+				es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
+				return key{}, errors.New(es)
+			}
+			//k, v, err := pF(ks[0])
+			if err != nil {
+				return key{}, err
+			}
+			priK.pkn = pkn
+			priK.attr = make(map[string]*dynamodb.AttributeValue)
+			priK.attr[pkn] = &dto.TableDescription.AttributeDefinition.pkn
+
+			return priK, nil
+		}
+	}
+	
+	return func(ks ...interface{}) (key, error) {
+		if len(ks) < 2 {
+			es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
+			return key{}, errors.New(es)
+		}
+		//pk, pv, err := pF(ks[0])
+		//if err != nil {
+		//	return key{}, err
+		//}
+		priK.pkn = pkn
+		priK.attr = make(map[string]*dynamodb.AttributeValue)
+		priK.attr[pkn] = &dto.TableDescription.AttributeDefinition.pkn
+
+		//rk, rv, err := rF(ks[1])
+		//if err != nil {
+		//	return key{}, err
+		//}
+		priK.rkn = rkn
+		priK.attr[rkn] = &dto.TableDescription.AttributeDefinition.rkn
+		return priK, nil
 	}
 }
 
