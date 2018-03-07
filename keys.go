@@ -268,11 +268,27 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
 			for _, def := range dto.Table.AttributeDefinitions {
 				if *def.AttributeName == pkn {
-					priK.attr[pkn] = def
+					switch *def.AttributeType {
+					case "S":
+						s, ok := ks[0].(string)
+						if !ok {
+							err := &KeyValueOfIncorrectType{reflect.String, reflect.TypeOf(ks[0]).Kind()}
+							return priK, err
+						}
+						priK.attr[pkn] = &dynamodb.AttributeValue{S: &s}
+					case "N":
+						v := reflect.ValueOf(ks[0])
+						if !isInt(v) {
+							err := &KeyValueOfIncorrectType{reflect.Int, v.Kind()}
+							return priK, err
+						}
+						s := strconv.FormatInt(v.Int(), 10)
+						priK.attr[pkn] = &dynamodb.AttributeValue{N: &s}
+					default:
+						//panic(&UnsupportedKeyKindError{ks[0].Type.Kind()})
+					}
 				}
 			}
-			
-
 			return priK, nil
 		}
 	}
@@ -290,18 +306,49 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		priK.attr = make(map[string]*dynamodb.AttributeValue)
 		for _, def := range dto.Table.AttributeDefinitions {
 			if *def.AttributeName == pkn {
-				priK.attr[pkn] = def
+				switch *def.AttributeType {
+				case "S":
+					s, ok := ks[0].(string)
+					if !ok {
+						err := &KeyValueOfIncorrectType{reflect.String, reflect.TypeOf(ks[0]).Kind()}
+						return priK, err
+					}
+					priK.attr[pkn] = &dynamodb.AttributeValue{S: &s}
+				case "N":
+					v := reflect.ValueOf(ks[0])
+					if !isInt(v) {
+						err := &KeyValueOfIncorrectType{reflect.Int, v.Kind()}
+						return priK, err
+					}
+					s := strconv.FormatInt(v.Int(), 10)
+					priK.attr[pkn] = &dynamodb.AttributeValue{N: &s}
+				default:
+					//panic(&UnsupportedKeyKindError{ks[0].Type.Kind()})
+				}
 			}
 		}
-
-		//rk, rv, err := rF(ks[1])
-		//if err != nil {
-		//	return key{}, err
-		//}
 		priK.rkn = rkn
 		for _, def := range dto.Table.AttributeDefinitions {
 			if *def.AttributeName == rkn {
-				priK.attr[rkn] = def
+				switch *def.AttributeType {
+				case "S":
+					s, ok := ks[1].(string)
+					if !ok {
+						err := &KeyValueOfIncorrectType{reflect.String, reflect.TypeOf(ks[1]).Kind()}
+						return priK, err
+					}
+					priK.attr[rkn] = &dynamodb.AttributeValue{S: &s}
+				case "N":
+					v := reflect.ValueOf(ks[1])
+					if !isInt(v) {
+						err := &KeyValueOfIncorrectType{reflect.Int, v.Kind()}
+						return priK, err
+					}
+					s := strconv.FormatInt(v.Int(), 10)
+					priK.attr[rkn] = &dynamodb.AttributeValue{N: &s}
+				default:
+					//panic(&UnsupportedKeyKindError{ks[1].Type.Kind()})
+				}
 			}
 		}
 		return priK, nil
