@@ -197,14 +197,14 @@ func deleteSecondaryIndex(rt reflect.Type, in string) (dynamodb.UpdateTableInput
 //
 //TODO_JAPHY - this can be used for testing and as a utility for
 //createSecondaryIndex
-func tableHasIndex(rt reflect.Type, in string) (key, bool) {
-	tn := TableName(rt)
-	dynamodb.DescribeTableInput{
-		TableName: aws.String(tn),
-	}
+//func tableHasIndex(rt reflect.Type, in string) (key, bool) {
+//	tn := TableName(rt)
+//	dynamodb.DescribeTableInput{
+//		TableName: aws.String(tn),
+//	}
 	//YOUR CODE GOES HERE
-	return key{}, false
-}
+//	return key{}, false
+//}
 
 //CreateKeyMaker accepts a type, and an index name.
 //The index name should specify the name of an index available within
