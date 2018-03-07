@@ -224,7 +224,7 @@ func tableHasIndex(rt reflect.Type, in string) (key, bool) {
 // generalized. This method returns no errors - we expect the errors to come
 // from the query execution. You'll have to look up the field name for the
 // associated attribute values.
-func CreateKeyMakerByName(rt reflect.Type, in string, dto describeTableOutput) KeyMaker {
+func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTableOutput) KeyMaker {
 	//allow pointers to struct
 	var t reflect.Type
 	switch rt.Kind() {
@@ -246,9 +246,9 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto describeTableOutput) K
 	//pF := func(kv interface{}) (string, dynamodb.AttributeValue, error) {
 	//	return getKeynameAndAttribute(t, pki, kv)
 	//}
-	for i:=0, i < dto.TableDescription.GlobalSecondaryIndexes.size(), ++i {
+	for i:=0; i < dto.TableDescription.GlobalSecondaryIndexes.size(); i++ {
 		if dto.TableDescription.GlobalSecondaryIndexes[i].IndexName == in {
-			for j:=0, j < dto.TableDescription.GlobalSecondaryIndexes.size(), ++j {
+			for j:=0; j < dto.TableDescription.GlobalSecondaryIndexes.size(); j++ {
 				if dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j].KeyType == "HASH"{
 					pkn := dto.TableDescription.GlobalSecondaryIndexes[i].KeySchema[j]
 				}
@@ -267,9 +267,9 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto describeTableOutput) K
 				return key{}, errors.New(es)
 			}
 			//k, v, err := pF(ks[0])
-			if err != nil {
-				return key{}, err
-			}
+			//if err != nil {
+			//	return key{}, err
+			//}
 			priK.pkn = pkn
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
 			priK.attr[pkn] = &dto.TableDescription.AttributeDefinition.pkn
