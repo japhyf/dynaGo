@@ -268,8 +268,11 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
 			for _, def := range dto.Table.AttributeDefinitions {
 				//assign the attr[pkn] to it's appropriate value
-				if *def.AttributeName == pkn {
-					switch *def.AttributeType {
+				an := aws.StringValue(def.AttributeName)
+				if an == pkn {
+					at := aws.StringValue(def.AttributeType)
+					fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
+					switch at {
 					case "S":
 						s, ok := ks[0].(string)
 						if !ok {
@@ -286,10 +289,13 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 						s := strconv.FormatInt(v.Int(), 10)
 						priK.attr[pkn] = &dynamodb.AttributeValue{N: &s}
 					default:
+						fmt.Printf("bad news boys...")
 						//need to write a default case
 						//panic(&UnsupportedKeyKindError{ks[0].Type.Kind()})
 					}
+					break
 				}
+				fmt.Printf("couldn't find attribute named %s", pkn)
 			}
 			return priK, nil
 		}
@@ -304,8 +310,11 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		priK.attr = make(map[string]*dynamodb.AttributeValue)
 		for _, def := range dto.Table.AttributeDefinitions {
 			//assign the attr[pkn] to it's appropriate value
-			if *def.AttributeName == pkn {
-				switch *def.AttributeType {
+			an := aws.StringValue(def.AttributeName)
+			if an == pkn {
+				at := aws.StringValue(def.AttributeType)
+				fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
+				switch at {
 				case "S":
 					s, ok := ks[0].(string)
 					if !ok {
@@ -329,8 +338,10 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		priK.rkn = rkn
 		for _, def := range dto.Table.AttributeDefinitions {
 			//assign the attr[rkn] to it's appropriate value
-			if *def.AttributeName == rkn {
-				switch *def.AttributeType {
+			an := aws.StringValue(def.AttributeName)
+			if an == rkn {
+				at := aws.StringValue(def.AttributeType)
+				switch at {
 				case "S":
 					s, ok := ks[1].(string)
 					if !ok {
