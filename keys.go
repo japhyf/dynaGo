@@ -241,18 +241,20 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 	pkn := ""
 	rkn := ""
 	for _, i := range dto.Table.GlobalSecondaryIndexes{
-		if *i.IndexName == in {
-			for j:=0; j < 2; j++ {
-				if *i.KeySchema[j].KeyType == "HASH"{
-					pkn = *i.KeySchema[j].AttributeName
+		ci := aws.StringValue(i.IndexName)
+		if ci == in {
+			all := i.KeySchema
+			for _, a := range all {
+				kt := aws.StringValue(a.KeyType)
+				kn := aws.StringValue(a.AttributeName)
+				if kt == "HASH"{
+					pkn = kn
+					break
 				}
-				if *i.KeySchema[j].KeyType == "RANGE"{
-					rkn = *i.KeySchema[j].AttributeName
-				}
-				break;
+				rkn = kn
 			}
+			break
 		}
-
 	}
 	if rkn == "" {
 		return func(ks ...interface{}) (key, error) {

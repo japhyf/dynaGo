@@ -89,7 +89,7 @@ func TestSecondaryIndexCreateKeyMaker(t *testing.T) {
 		t.Errorf("Describe table query failed: %s", err)
 		t.FailNow()
 	}
-	km := CreateKeyMakerByName(KeysTestUsrType, fn, *dto)
+	km := CreateKeyMakerByName(KeysTestUsrType, in, *dto)
 	key, err := km(em)
 	if err != nil {
 		t.Errorf("KeyMaker failed to construct key:: %s", err)
