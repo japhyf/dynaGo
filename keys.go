@@ -179,7 +179,6 @@ func getKeyAttr(rt reflect.Type, name string) (dynamodb.AttributeDefinition, err
 func deleteSecondaryIndex(rt reflect.Type, in string) (dynamodb.UpdateTableInput, error) {
 	tn := TableName(rt)
 	return dynamodb.UpdateTableInput{
-		//AttributeDefinitions: []*dynamodb.AttributeDefinition{&pkAttr, &rkAttr},
 		TableName:            aws.String(tn),
 		GlobalSecondaryIndexUpdates: []*dynamodb.GlobalSecondaryIndexUpdate{
 			&dynamodb.GlobalSecondaryIndexUpdate{
@@ -233,7 +232,7 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 	default:
 		t = rt
 	}
-
+	//we know the key will be used for a secGbl index
 	priK := key{
 		t:    secGbl,
 		tbln: TableName(t),
@@ -243,8 +242,10 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 	for _, i := range dto.Table.GlobalSecondaryIndexes{
 		ci := aws.StringValue(i.IndexName)
 		if ci == in {
+			//once we find the gblIndex with given name
 			all := i.KeySchema
 			for _, a := range all {
+				//assign pkn and rkn
 				kt := aws.StringValue(a.KeyType)
 				kn := aws.StringValue(a.AttributeName)
 				if kt == "HASH"{
@@ -257,18 +258,16 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		}
 	}
 	if rkn == "" {
+		//only a partition key
 		return func(ks ...interface{}) (key, error) {
 			if len(ks) < 1 {
 				es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
 				return key{}, errors.New(es)
 			}
-			//k, v, err := pF(ks[0])
-			//if err != nil {
-			//	return key{}, err
-			//}
 			priK.pkn = pkn
 			priK.attr = make(map[string]*dynamodb.AttributeValue)
 			for _, def := range dto.Table.AttributeDefinitions {
+				//assign the attr[pkn] to it's appropriate value
 				if *def.AttributeName == pkn {
 					switch *def.AttributeType {
 					case "S":
@@ -287,6 +286,7 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 						s := strconv.FormatInt(v.Int(), 10)
 						priK.attr[pkn] = &dynamodb.AttributeValue{N: &s}
 					default:
+						//need to write a default case
 						//panic(&UnsupportedKeyKindError{ks[0].Type.Kind()})
 					}
 				}
@@ -300,13 +300,10 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			es := fmt.Sprintf("dynaGo:%s KeyMaker: incorrect num args [%d]", t.Name(), len(ks))
 			return key{}, errors.New(es)
 		}
-		//pk, pv, err := pF(ks[0])
-		//if err != nil {
-		//	return key{}, err
-		//}
 		priK.pkn = pkn
 		priK.attr = make(map[string]*dynamodb.AttributeValue)
 		for _, def := range dto.Table.AttributeDefinitions {
+			//assign the attr[pkn] to it's appropriate value
 			if *def.AttributeName == pkn {
 				switch *def.AttributeType {
 				case "S":
@@ -331,6 +328,7 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		}
 		priK.rkn = rkn
 		for _, def := range dto.Table.AttributeDefinitions {
+			//assign the attr[rkn] to it's appropriate value
 			if *def.AttributeName == rkn {
 				switch *def.AttributeType {
 				case "S":
@@ -349,6 +347,7 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 					s := strconv.FormatInt(v.Int(), 10)
 					priK.attr[rkn] = &dynamodb.AttributeValue{N: &s}
 				default:
+					//need to wirte default case
 					//panic(&UnsupportedKeyKindError{ks[1].Type.Kind()})
 				}
 			}
