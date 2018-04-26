@@ -69,6 +69,7 @@ func TestSecondaryIndexCreate(t *testing.T) {
 	}
 }
 func TestSecondaryIndexDelete(t *testing.T) {
+	WaitForActiveTable(tn)
 	if testTableHasIndex(tn, in, t) == nil {
 		t.Errorf("%s table does not have index '%s' to delete!", tn, in)
 	}
@@ -108,6 +109,7 @@ func TestSecondaryIndexCreateKeyMaker(t *testing.T) {
 	}
 	if key.attr == nil || key.attr[fn] == nil || aws.StringValue(key.attr[fn].S) != em {
 		t.Error("KeyMaker produced incorrect attribute value map.")
+		//t.Error("KeyMaker produced incorrect attribute value map. value is %s, expecting %s", key.attr[fn].S, em)
 	}
 }
 

@@ -269,9 +269,10 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			for _, def := range dto.Table.AttributeDefinitions {
 				//assign the attr[pkn] to it's appropriate value
 				an := aws.StringValue(def.AttributeName)
+				fmt.Printf("AttributeName is %s, searching for %s", an, pkn)
 				if an == pkn {
 					at := aws.StringValue(def.AttributeType)
-					fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
+					//fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
 					switch at {
 					case "S":
 						s, ok := ks[0].(string)
@@ -313,7 +314,7 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 			an := aws.StringValue(def.AttributeName)
 			if an == pkn {
 				at := aws.StringValue(def.AttributeType)
-				fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
+				//fmt.Printf("AttributeName is %s, AttributeType is %s, pkn is %s", an, at, pkn)
 				switch at {
 				case "S":
 					s, ok := ks[0].(string)
@@ -366,7 +367,14 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 		return priK, nil
 	}
 }
-
+func WaitForActiveTable(tn string) error{
+	dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
+	if (*dto.Table.TableStatus != "ACTIVE") {
+		WaitForActiveTable(tn)
+	} 
+    return err
+	
+}
 //CreateKeyMaker To put items to dynamoDB is one thing (Marshal), but to
 // get items from dynamoDB often requires a GetItemInput (if the item is
 // fetched by primary key directly) this method will convert a struct i
