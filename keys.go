@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -33,6 +34,12 @@ type key struct {
 	attr map[string]*dynamodb.AttributeValue
 }
 
+type tableNeverActive struct {
+	s string
+}
+func (e *tableNeverActive) Error() string {
+    return e.s
+}
 //KeyMaker is an interface specifying a function that takes as a
 //set of arguments any values that are intended to be the values
 //of the attributes of the the key specified by this keyMaker,
@@ -368,11 +375,23 @@ func CreateKeyMakerByName(rt reflect.Type, in string, dto dynamodb.DescribeTable
 	}
 }
 func WaitForActiveTable(tn string) error{
-	dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
-	if (*dto.Table.TableStatus != "ACTIVE") {
-		WaitForActiveTable(tn)
-	} 
-    return err
+	//dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	for t := range ticker.C {
+		dto, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(tn)})
+		if err != nil {
+			return err
+		}
+		if (*dto.Table.TableStatus != "ACTIVE") {
+			fmt.Printf("table isn't active at", t)
+		} else {
+			fmt.Printf("table", tn," is active at", t)
+			return nil
+		}
+	}
+	time.Sleep(3000 * time.Millisecond)
+	ticker.Stop()
+    return &tableNeverActive{tn}
 	
 }
 //CreateKeyMaker To put items to dynamoDB is one thing (Marshal), but to
